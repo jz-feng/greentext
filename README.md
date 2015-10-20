@@ -16,11 +16,13 @@ Note comments are not implemented yet. Pretend the #'s in below snippets work as
 
 - Print output with `>mfw`
 - Surround token with double quotes to print as literal; multi-token literals coming soon!!11!
+- Separate with commas to print multiple values on the same line
+- Boolean values: true = `:^)` false = `:^{`
 ````
->mfw 3 4.5 "string"   # Outputs 3 4.5 string
+>mfw 3, 4.5, "string"   # Outputs 3 4.5 string
+>mfw 3 < 5,  3 * 4 - 5  # Outputs :^) 7
 ````
 - Declare and assign variables with `>be`
-- Math expressions are evaluated without order of operations except brackets
 ````
 >be me 19
 >be var 1 * 2 - (3 - 4)
@@ -53,23 +55,19 @@ Note comments are not implemented yet. Pretend the #'s in below snippets work as
 
 ````
 >inb4 i from 0 to 100 by 1
-	>be a i % 3
-	>be b i % 5
-	>be c i % 15
-	>implying c is 0
-		>mfw "fizzbuzz" i
-	>or not
-		>implying a is 0
-			>mfw "fizz" i
-		>done implying
-		>implying b is 0
-			>mfw "buzz" i
-		>done implying
-  >done implying
+    >implying i % 15 is 0
+        >mfw "fizzbuzz", i
+    >or not
+        >implying i % 3 is 0
+            >mfw "fizz", i
+        >done implying
+        >implying i % 5 is 0
+            >mfw "buzz", i
+        >done implying
+	  >done implying
 >done inb4
 ````
 
 ### Planned functionalities
-- Full evaluation of Boolean expressions (with embedded math expressions)
 - "else if" statements
 - Functions and procedures
