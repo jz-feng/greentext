@@ -21,7 +21,7 @@ def is_float(token):
         return False
 
 
-def do_operation(operator, operand1, operand2):
+def do_math_operation(operator, operand1, operand2):
     if operator == '+':
         return operand1 + operand2
     elif operator == '-':
@@ -36,56 +36,120 @@ def do_operation(operator, operand1, operand2):
         raise ValueError
 
 
+def do_boolean_operation(operator, operand1, operand2):
+    if operator == "is":
+        return TRUE if operand1 == operand2 else FALSE
+    elif operator == "isn\'t":
+        return TRUE if operand1 != operand2 else FALSE
+    elif operator == "<":
+        return TRUE if operand1 < operand2 else FALSE
+    elif operator == ">":
+        return TRUE if operand1 > operand2 else FALSE
+    elif operator == "<=":
+        return TRUE if operand1 <= operand2 else FALSE
+    elif operator == ">=":
+        return TRUE if operand1 >= operand2 else FALSE
+    elif operand1 in truefalse and operand2 in truefalse:
+        if operator == "and":
+            return TRUE if (operand1 == TRUE and operand2 == TRUE) else FALSE
+        elif operator == "or":
+            return TRUE if (operand1 == TRUE or operand2 == TRUE) else FALSE
+        elif operator == "not":
+            return TRUE if operand1 == FALSE else FALSE
+        else:
+            return "invalid"
+    else:
+        return "invalid"
+
+
 class Parser:
+
+    standalone_bool_keywords = ["is", "isn\'t", "and", "or", "not"]
+    embeddable_bool_keywords = ["<", ">", "<=", ">=", "(", ")"]
 
     variables = {}
 
     def __init__(self):
         pass
 
-    def parse_boolean(self, tokens):
-        keywords = ["is", "isn\'t", "<", ">", "<=", ">=", "and", "or", "not"]
-        new_tokens = []
+    def parse_boolean(self, src_tokens):
+        value_operators = ["is", "isn\'t", "<", ">", "<=", ">="]
+        boolean_operators = ["and", "or", "not"]
 
-        for token in tokens:
-            if token in keywords:
-                new_tokens.append(token)
+        tokens = src_tokens
+
+        i = 0
+        while i < len(tokens):
+            token = tokens[i]
+            if token.isdigit():
+                tokens[i] = int(token)
+            elif is_float(token):
+                tokens[i] = float(token)
+            elif is_literal(token):
+                tokens[i] = token[1:-1]
+            elif token in self.variables:
+                tokens[i] = self.variables[token]
+            elif token in self.standalone_bool_keywords or token in self.embeddable_bool_keywords:
+                tokens[i] = token
+            elif any(c in token for c in self.embeddable_bool_keywords):
+                split_tokens = [t for t in re.split("(<|>|<=|>=|\(|\))", token) if len(t) > 0]
+                tokens.pop(i)
+                tokens[i:i] = split_tokens
+                i -= 1
             else:
-                if is_literal(token):
-                    new_tokens.append(token[1:-1])
-                elif token.isdigit():
-                    new_tokens.append(int(token))
-                elif is_float(token):
-                    new_tokens.append(float(token))
-                elif token in self.variables:
-                    new_tokens.append(self.variables[token])
-                else:
-                    print "wtf can't read", token
-                    return "invalid"
-
-        for i in range(0, len(new_tokens)):
-            token = new_tokens[i]
-            # print token
-
-            try:
-                prev_token = new_tokens[i - 1]
-                next_token = new_tokens[i + 1]
-            except IndexError:
-                print "wtf can't read this"
+                print "wtf can't read", token
                 return "invalid"
+            i += 1
 
-            if token == "is":
-                return TRUE if prev_token == next_token else FALSE
-            elif token == "isn\'t":
-                return TRUE if prev_token != next_token else FALSE
-            elif token == "<":
-                return TRUE if prev_token < next_token else FALSE
-            elif token == ">":
-                return TRUE if prev_token > next_token else FALSE
-            elif token == "<=":
-                return TRUE if prev_token <= next_token else FALSE
-            elif token == ">=":
-                return TRUE if prev_token >= next_token else FALSE
+        i = 1
+        while i < len(tokens) - 1:
+            t = tokens[i]
+            prev_t = tokens[i - 1]
+            next_t = tokens[i + 1]
+            if t in value_operators:
+                result = do_boolean_operation(t, prev_t, next_t)
+                if result in truefalse:
+                    i -= 1
+                    tokens.pop(i)
+                    tokens.pop(i)
+                    tokens.pop(i)
+                    tokens.insert(i, result)
+                else:
+                    return result
+            i += 1
+        # print tokens
+
+        operator, operand = [], []
+        i = 0
+        while i < len(tokens):
+            t = tokens[i]
+            # print t, operand, operator
+            if t in boolean_operators:
+                operator.append(t)
+            elif t == ')':
+                if len(operand) > 1:
+                    op2 = operand.pop()
+                    op1 = operand.pop()
+                    operand.append(do_boolean_operation(operator.pop(), op1, op2))
+            elif t in truefalse:
+                if tokens[i - 1] == '(':
+                    operand.append(t)
+                else:
+                    if len(operand) == 0:
+                        if len(operator) > 0 and operator[-1] == "not":
+                            operand.append(do_boolean_operation(operator.pop(), t, TRUE))
+                        else:
+                            operand.append(t)
+                    else:
+                        op = operand.pop()
+                        if len(operator) > 0 and operator[-1] == "not":
+                            opr = operator.pop()
+                            operand.append(do_boolean_operation(
+                                operator.pop(), op, do_boolean_operation(opr, t, TRUE)))
+                        else:
+                            operand.append(do_boolean_operation(operator.pop(), op, t))
+            i += 1
+        return operand.pop()
 
     def parse_math(self, src_tokens):
         keywords = ['(', ')', '*', '/', '+', '-', '%']
@@ -125,28 +189,21 @@ class Parser:
                     if len(operand) > 1:
                         op2 = operand.pop()
                         op1 = operand.pop()
-                        operand.append(do_operation(operator.pop(), op1, op2))
+                        operand.append(do_math_operation(operator.pop(), op1, op2))
                 elif is_float(t):
                     if tokens[i - 1] == '(':
-                        operand.append(float(tokens[i]))
+                        operand.append(float(t))
                     else:
                         if len(operand) == 0:
                             operand.append(float(t))
                         else:
                             op = operand.pop()
-                            operand.append(do_operation(operator.pop(), op, float(t)))
+                            operand.append(do_math_operation(operator.pop(), op, float(t)))
                 i += 1
             return operand.pop()
         except ValueError:
             print "wtf can't math this"
             return None
-
-    # def parse_expression(self, tokens):
-    #     boolean_result = self.parse_boolean(tokens)
-    #     if boolean_result in truefalse:
-    #         return
-    #     else:
-    #         return self.parse_math(tokens)
 
     def parse(self, lines):
 
@@ -184,22 +241,36 @@ class Parser:
                 print
 
             elif tokens[0] == "be":
-                if tokens_len > 2:
-                    if is_literal(tokens[2]):
-                        self.variables[tokens[1]] = tokens[2][1:-1]
-                    elif tokens[2].isdigit() and tokens_len == 3:
-                        self.variables[tokens[1]] = int(tokens[2])
-                    elif is_float(tokens[2]) and tokens_len == 3:
-                        self.variables[tokens[1]] = float(tokens[2])
-                    elif tokens[2] in self.variables and tokens_len == 3:
-                        self.variables[tokens[1]] = self.variables[tokens[2]]
+                if tokens_len > 3 and tokens[2] == "like":
+                    if is_literal(tokens[3]):
+                        self.variables[tokens[1]] = tokens[3][1:-1]
+                    elif tokens[3].isdigit() and tokens_len == 4:
+                        self.variables[tokens[1]] = int(tokens[3])
+                    elif is_float(tokens[3]) and tokens_len == 4:
+                        self.variables[tokens[1]] = float(tokens[3])
+                    elif tokens[3] in self.variables and tokens_len == 4:
+                        self.variables[tokens[1]] = self.variables[tokens[3]]
                     else:
-                        parse_result = self.parse_math(tokens[2:])
-                        if parse_result is None:
-                            print "wtf can't be this"
-                            return
+                        contains_boolean = False
+                        for t in tokens[3:]:
+                            if (t in self.standalone_bool_keywords)\
+                                    or any(s in self.embeddable_bool_keywords for s in t):
+                                contains_boolean = True
+                                break
+                        if contains_boolean:
+                            parse_result = self.parse_boolean(tokens[3:])
+                            if parse_result in truefalse:
+                                self.variables[tokens[1]] = parse_result
+                            else:
+                                print "wtf can't be this truefalse"
+                                return
                         else:
-                            self.variables[tokens[1]] = parse_result
+                            parse_result = self.parse_math(tokens[3:])
+                            if parse_result is None:
+                                print "wtf can't be this number"
+                                return
+                            else:
+                                self.variables[tokens[1]] = parse_result
 
             elif tokens[0] == "implying":
                 condition_scope_stack.append(TRUE)
@@ -223,7 +294,8 @@ class Parser:
 
                 # print condition_scope_stack, condition_execution_stack, line_count
 
-            elif (tokens_len == 2) and (tokens[0] == "or") and (tokens[1] == "not") and (len(condition_scope_stack) > 0):
+            elif (tokens_len == 2) and (tokens[0] == "or") \
+                    and (tokens[1] == "not") and (len(condition_scope_stack) > 0):
                 condition_scope_stack[-1] = FALSE
                 # print condition_scope_stack, condition_execution_stack, line_count
 
@@ -264,13 +336,13 @@ class Parser:
         inputlines = []
 
         for line in sys.stdin:
-            strippedline = line.lstrip()
-            if len(strippedline) > 0:
-                if strippedline[0] != '>':
+            stripped_line = line.lstrip()
+            if len(stripped_line) > 0:
+                if stripped_line[0] != '>':
                     print "do you even greentext"
                     return
                 else:
-                    inputlines.append(strippedline[1:])
+                    inputlines.append(stripped_line[1:])
 
         self.parse(inputlines)
 
