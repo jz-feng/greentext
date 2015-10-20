@@ -22,11 +22,12 @@ Note comments are not implemented yet. Pretend the #'s in below snippets work as
 >mfw 3, 4.5, "string"   # Outputs 3 4.5 string
 >mfw 3 < 5,  3 * 4 - 5  # Outputs :^) 7
 ````
-- Declare and assign variables with `>be`
+- Declare and assign variables with `>be like`
+- Format: `>be var_name like var_value`
 ````
->be me 19
->be var 1 * 2 - (3 - 4)
->be rare_pepe me + var
+>be me like 19
+>be var like 1 * 2 - (3 - 4)
+>be rare_pepe like me + var
 >mfw rare_pepe      # Outputs 22.0
 ````
 - Conditional statements are done with `>implying`
@@ -35,7 +36,6 @@ Note comments are not implemented yet. Pretend the #'s in below snippets work as
   - `a is b` a == b
   - `a isn't b` a != b
   - >, <, >=, <= work the same way
-- Boolean expressions coming soon!!!!
 ````
 >implying 3 is 4
   >mfw "true"
