@@ -12,12 +12,13 @@ The parser takes input from stdin. Run it and write code, or pass a pre-written 
 
 Every line must start with the greentext arrow a.k.a. meme arrow '>'
 
-Note comments are not implemented yet. Pretend the #'s in below snippets work as comments
+Everything in a line after any '#' is commented out
+
+Boolean values are true = `:^)` false = `:^{`. They are treated as string constants.
 
 - Print output with `>mfw`
 - Surround token with double quotes to print as literal; multi-token literals coming soon!!11!
 - Separate with commas to print multiple values on the same line
-- Boolean values: true = `:^)` false = `:^{`
 ````
 >mfw 3, 4.5, "string"   # Outputs 3 4.5 string
 >mfw 3 < 5,  3 * 4 - 5  # Outputs :^) 7

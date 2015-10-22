@@ -127,10 +127,26 @@ class Parser:
 
         while line_count < len(lines):
             tokens = lines[line_count].split()
+
+            # Remove commented tokens
+            i = 0
+            while i < len(tokens):
+                t = tokens[i]
+                if '#' in t:
+                    tokens[i] = t.partition('#')[0]
+                    i += 1
+                    break
+                i += 1
+            while len(tokens) > i:
+                tokens.pop()
+
+            # Filter out empty tokens
+            tokens = [t for t in tokens if len(t) > 0]
+
             # print tokens
             tokens_len = len(tokens)
 
-            # Skip blank lines and commented out lines
+            # Skip blank lines
             if tokens_len == 0:
                 continue
 
@@ -238,12 +254,8 @@ class Parser:
 
         for line in sys.stdin:
             stripped_line = line.lstrip()
-            if len(stripped_line) > 0:
-                if stripped_line[0] != '>':
-                    print "do you even greentext"
-                    return
-                else:
-                    inputlines.append(stripped_line[1:])
+            if len(stripped_line) > 0 and stripped_line[0] != '#':
+                inputlines.append(stripped_line[1:])
 
         self.parse(inputlines)
 
