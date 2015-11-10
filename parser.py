@@ -102,7 +102,6 @@ class Parser:
             else:
                 return result
         except SyntaxError:
-            print "wtf what kinda expression is this"
             return None
 
     def parse(self, lines):
@@ -134,8 +133,10 @@ class Parser:
             # Filter out empty tokens
             tokens = [t for t in tokens if len(t) > 0]
 
+            tokens_len = len(tokens)
+
             # Skip processing for blank lines (but keep them)
-            if len(tokens) == 0:
+            if tokens_len == 0:
                 line_tokens.append(tokens)
                 line_address += 1
                 continue
@@ -146,7 +147,7 @@ class Parser:
 
             elif tokens[0] == "wewlad":
                 try:
-                    if len(tokens) < 2:
+                    if tokens_len < 2:
                         raise StandardError
                     if is_in_func_def:
                         print_error("can't wewlad inside wewlad", line_address)
@@ -204,10 +205,25 @@ class Parser:
                     is_in_func_def = False
                 else:
                     print_error("bad tfw syntax", line_address)
+                    return
+
+            # Process global variable declarations
+            if not is_in_func_def:
+                if tokens[0] == "be":
+                    if tokens_len == 2:
+                        var_name = tokens[1]
+                        self.add_variable(var_name, "")
+                    elif tokens_len > 3 and tokens[2] == "like":
+                        var_name = tokens[1]
+                        var_value = self.parse_expression(tokens[3:])
+                        self.add_variable(var_name, var_value)
+                    else:
+                        print_error("bad be syntax", line_address)
+                        return
 
             line_tokens.append(tokens)
             line_address += 1
-        print line_tokens
+
         if main_address == -1:
             print_error("no memes found", -1)
             return
@@ -252,54 +268,42 @@ class Parser:
                         result = self.parse_expression(tokens_group)
                         if result is not None:
                             print result,
+                        else:
+                            print_error("bad expression", line_address)
+                            return
                         tokens_group = []
                 # if line ended without comma, print the rest as a token group
                 if len(tokens_group) > 0:
                     result = self.parse_expression(tokens_group)
                     if result is not None:
                         print result,
+                    else:
+                        print_error("bad expression", line_address)
+                        return
                 # print newline
                 print
 
-            # Syntax: be var_name like var_value or expression
-            elif tokens[0] == "be" and tokens_len > 3 and tokens[2] == "like":
-                var_name = tokens[1]
-                var_value = self.parse_expression(tokens[3:])
-                self.add_variable(var_name, var_value)
+            elif tokens[0] == "be":
+                # Syntax: be var_name
+                if tokens_len == 2:
+                    var_name = tokens[1]
+                    self.add_variable(var_name, "")
+                # Syntax: be var_name like var_value or expression
+                elif tokens_len > 3 and tokens[2] == "like":
+                    var_name = tokens[1]
+                    var_value = self.parse_expression(tokens[3:])
+                    self.add_variable(var_name, var_value)
+                else:
+                    print_error("bad be syntax", line_address)
 
             elif tokens[0] == "wewlad" and tokens_len > 1:
                 tokens
-                # try:
-                #     func_params = []
-                #     split_tokens = []
-                #     for t in tokens[1:]:
-                #         split_tokens.extend([t for t in re.split("(\(|\)|,)", t) if len(t) > 0])
-                #     if len(split_tokens) == 1:
-                #         func_name = split_tokens[0]
-                #         if not self.add_function(func_name, func_params, line_address):
-                #             raise StandardError
-                #     elif len(split_tokens) >= 3 and split_tokens[1] == "(" and split_tokens[-1] == ")":
-                #         func_name = split_tokens[0]
-                #         for i in range(2, len(split_tokens) - 1):
-                #             if i == len(split_tokens) - 2:              # last param
-                #                 func_params.append(split_tokens[i])
-                #             elif split_tokens[i + 1] == ",":            # other params must be followed by comma
-                #                 func_params.append(split_tokens[i])
-                #             elif split_tokens[i] != ",":
-                #                 raise StandardError
-                #         if not self.add_function(func_name, func_params, line_address):
-                #             raise StandardError
-                #     else:
-                #         raise StandardError
-                # except StandardError:
-                #     print "wtf can't wewlad this"
-                #     return
 
             elif tokens[0] == "memes":
-                print
+                tokens
 
             elif tokens[0] == "tfw":
-                print
+                tokens
 
             elif tokens[0] == "wew" and tokens_len > 1:
                 try:
