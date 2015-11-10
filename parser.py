@@ -141,7 +141,7 @@ class Parser:
                 line_address += 1
                 continue
 
-            if tokens[0] == "memes":
+            if tokens_len == 2 and tokens[0:2] == ["dank", "memes"]:
                 is_in_func_def = True
                 main_address = line_address + 1
 
@@ -258,7 +258,7 @@ class Parser:
                 line_address += 1
                 continue
 
-            # Syntax: mfw token group 1, token group 2
+            # Syntax: >mfw token group 1, token group 2
             if tokens[0] == "mfw":
                 tokens_group = []
                 for token in tokens[1:]:
@@ -284,26 +284,25 @@ class Parser:
                 print
 
             elif tokens[0] == "be":
-                # Syntax: be var_name
+                # Syntax: >be var_name
                 if tokens_len == 2:
                     var_name = tokens[1]
                     self.add_variable(var_name, "")
-                # Syntax: be var_name like var_value or expression
+                # Syntax: >be var_name like var_value/expression
                 elif tokens_len > 3 and tokens[2] == "like":
                     var_name = tokens[1]
                     var_value = self.parse_expression(tokens[3:])
                     self.add_variable(var_name, var_value)
                 else:
                     print_error("bad be syntax", line_address)
+                    return
 
-            elif tokens[0] == "wewlad" and tokens_len > 1:
-                tokens
-
-            elif tokens[0] == "memes":
-                tokens
+            # Do nothing, these have been taken care of in the first pass
+            elif tokens[0] == "memes" or tokens[0] == "wewlad":
+                pass
 
             elif tokens[0] == "tfw":
-                tokens
+                pass
 
             elif tokens[0] == "wew" and tokens_len > 1:
                 try:
@@ -333,6 +332,7 @@ class Parser:
                     print "wtf can't wew this"
                     return
 
+            # Syntax: >implying boolean_var/boolean_expression
             elif tokens[0] == "implying":
                 condition_scope_stack.append(TRUE)
 
@@ -340,15 +340,20 @@ class Parser:
                 if result in truefalse:
                     condition_execution_stack.append(result)
                 else:
-                    print "wtf can't imply this"
+                    print_error("bad implying syntax", line_address)
                     return
                 # print condition_scope_stack, condition_execution_stack, line_address  # debug line
 
-            elif tokens_len == 2 and tokens[0] == "or" \
-                    and (tokens[1] == "not") and (len(condition_scope_stack) > 0):
-                condition_scope_stack[-1] = FALSE
+            # Syntax: >or not
+            elif tokens_len == 2 and tokens[0:2] == ["or", "not"]:
+                if len(condition_scope_stack) > 0:
+                    condition_scope_stack[-1] = FALSE
+                else:
+                    print_error("unexpected or not", line_address)
+                    return
                 # print condition_scope_stack, condition_execution_stack, line_address  # debug line
 
+            # Syntax: >inb4 i from start to end (by step)
             elif tokens[0] == "inb4":
                 if tokens_len == 8 and tokens[2] == "from" and tokens[3].isdigit() and tokens[4] == "to" \
                         and tokens[5].isdigit() and tokens[6] == "by" and tokens[7].isdigit() \
@@ -360,26 +365,41 @@ class Parser:
                                       "end": int(tokens[5]),
                                       "step": int(tokens[7])})
                 else:
-                    print "wtf can't inb4 this"
+                    print_error("bad inb4 syntax", line_address)
                     return
 
             elif tokens[0] == "done" and tokens_len > 1:
-                if tokens[1] == "inb4" and len(loop_stack) > 0:
-                    call = loop_stack[-1]
-                    self.variables[call["counter"]] += call["step"]
-                    if (call["step"] > 0 and self.variables[call["counter"]] < call["end"]) \
-                            or (call["step"] < 0 and self.variables[call["counter"]] > call["end"]):
-                        line_address = call["line_pos"]
+                # Syntax: >done inb4
+                if tokens[1] == "inb4":
+                    if len(loop_stack) > 0:
+                        call = loop_stack[-1]
+                        self.variables[call["counter"]] += call["step"]
+                        if (call["step"] > 0 and self.variables[call["counter"]] < call["end"]) \
+                                or (call["step"] < 0 and self.variables[call["counter"]] > call["end"]):
+                            line_address = call["line_pos"]
+                        else:
+                            del self.variables[call["counter"]]
+                            loop_stack.pop()
                     else:
-                        del self.variables[call["counter"]]
-                        loop_stack.pop()
-                elif tokens[1] == "implying" and len(condition_scope_stack) > 0:
-                    condition_scope_stack.pop()
-                    condition_execution_stack.pop()
-                    # print condition_scope_stack, condition_execution_stack, line_address  # debug line
+                        print_error("unexpected done inb4", line_address)
+                        return
 
+                # Syntax: >done implying
+                elif tokens[1] == "implying":
+                    if len(condition_scope_stack) > 0:
+                        condition_scope_stack.pop()
+                        condition_execution_stack.pop()
+                        # print condition_scope_stack, condition_execution_stack, line_address  # debug line
+                    else:
+                        print_error("expected done implying", line_address)
+                        return
+                else:
+                    print_error("what is this", line_address)
+                    return
+
+            # Undefined token
             else:
-                print "wtf r u doing", line_address
+                print_error("what is this", line_address)
                 return
 
             line_address += 1
@@ -397,7 +417,7 @@ class Parser:
                 elif stripped_line[0] == ">":
                     inputlines.append(stripped_line[1:])
                 else:
-                    print "wtf do u even greentext"
+                    print_error("do you even greentext", -1)
                     return
 
         self.parse(inputlines)
