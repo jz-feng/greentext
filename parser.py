@@ -30,19 +30,35 @@ def print_error(message, line_address):
 
 class Parser:
 
-    variables = {}
+    global_variables = {}
     functions = {}
+
+    # Element = {"return_address":, "variables": {"var_name": var_value, ...}}
+    call_stack = []
 
     def __init__(self):
         pass
 
-    def add_variable(self, var_name, var_value):
+    def add_global_variable(self, var_name, var_value):
         if var_value is not None and len(var_name) > 0 and var_name[0].isalpha() and var_name.isalnum():
-            self.variables[var_name] = var_value
+            self.global_variables[var_name] = var_value
             return True
         else:
-            print "wtf can't be this"
             return False
+
+    def add_variable(self, var_name, var_value):
+        if var_value is not None and len(var_name) > 0 and var_name[0].isalpha() and var_name.isalnum() \
+                and len(self.call_stack) > 0:
+            self.call_stack[-1]["variables"][var_name] = var_value
+            return True
+        else:
+            return False
+
+    def get_local_variables(self):
+        if len(self.call_stack) > 0:
+            return self.call_stack[-1]["variables"]
+        else:
+            return {}
 
     def add_function(self, func_name, func_params, start_address):
         if len(func_name) > 0 and func_name[0].isalpha() and func_name.isalnum():
@@ -53,7 +69,9 @@ class Parser:
             for p in func_params:
                 if not(len(p) > 0 and p[0].isalpha() and p.isalnum()):
                     return False
-            self.functions[func_name] = {"params": func_params, "start_address": start_address, "return_address": 0}
+            self.functions[func_name] = {"params": func_params,
+                                         "start_address": start_address + 1,
+                                         "return_address": 0}
             return True
         else:
             return False
@@ -73,8 +91,10 @@ class Parser:
                     result = t[1:-1]
                 elif is_float(t) or t == "True" or t == "False":
                     result = t
-                elif t in self.variables:
-                    result = self.variables[t]
+                elif t in self.get_local_variables():
+                    result = self.get_local_variables()[t]
+                elif t in self.global_variables:
+                    result = self.global_variables[t]
                 else:
                     raise SyntaxError
             elif len(split_tokens) > 1:
@@ -89,21 +109,30 @@ class Parser:
                         split_tokens[i] = "True"
                     elif t == FALSE:
                         split_tokens[i] = "False"
-                    elif t in self.variables:
-                        split_tokens[i] = str(self.variables[t])
+                    elif t in self.get_local_variables():
+                        split_tokens[i] = str(self.get_local_variables()[t])
                         i -= 1
+                    elif t in self.global_variables:
+                        split_tokens[i] = str(self.global_variables[t])
+                        i -= 1
+                    elif is_float(t) or is_literal(t) or \
+                            t in ["True", "False", "(", ")", "*", "/", "+", "-", "%", "<", ">"]:
+                        split_tokens[i] = t
+                    else:
+                        raise SyntaxError
                     i += 1
-                # print split_tokens
                 result = str(eval(" ".join(split_tokens)))
+                # print result  # debug line
             if result == "True":
                 return TRUE
             elif result == "False":
                 return FALSE
             else:
                 return result
-        except SyntaxError:
+        except (SyntaxError, TypeError):
             return None
 
+    # noinspection PyPep8Naming
     def parse(self, lines):
 
         # First pass
@@ -144,6 +173,7 @@ class Parser:
             if tokens_len == 2 and tokens[0:2] == ["dank", "memes"]:
                 is_in_func_def = True
                 main_address = line_address + 1
+                self.add_function("main", [], main_address)
 
             elif tokens[0] == "wewlad":
                 try:
@@ -204,7 +234,7 @@ class Parser:
                 if is_in_func_def:
                     is_in_func_def = False
                 else:
-                    print_error("bad tfw syntax", line_address)
+                    print_error("unexpected tfw", line_address)
                     return
 
             # Process global variable declarations
@@ -212,11 +242,16 @@ class Parser:
                 if tokens[0] == "be":
                     if tokens_len == 2:
                         var_name = tokens[1]
-                        self.add_variable(var_name, "")
+                        self.add_global_variable(var_name, "")
                     elif tokens_len > 3 and tokens[2] == "like":
                         var_name = tokens[1]
                         var_value = self.parse_expression(tokens[3:])
-                        self.add_variable(var_name, var_value)
+                        if var_value is None:
+                            print_error("bad expression", line_address)
+                            return
+                        if not self.add_global_variable(var_name, var_value):
+                            print_error("bad variable", line_address)
+                            return
                     else:
                         print_error("bad be syntax", line_address)
                         return
@@ -233,12 +268,16 @@ class Parser:
 
         # Second pass
 
+        # Element = {"line_pos":, "counter":, "start":, "end":, "step":}
         loop_stack = []
+        # Element = {TRUE/FALSE}
         condition_execution_stack = []
+        # Element = {TRUE/FALSE}
         condition_scope_stack = []
-        func_stack = []
 
+        # Begin execution at main
         line_address = main_address
+        self.call_stack.append({"return_address": -1, "variables": {}})
 
         while line_address < len(line_tokens):
             tokens = line_tokens[line_address]
@@ -292,7 +331,12 @@ class Parser:
                 elif tokens_len > 3 and tokens[2] == "like":
                     var_name = tokens[1]
                     var_value = self.parse_expression(tokens[3:])
-                    self.add_variable(var_name, var_value)
+                    if var_value is None:
+                        print_error("bad expression", line_address)
+                        return
+                    if not self.add_variable(var_name, var_value):
+                        print_error("bad variable", line_address)
+                        return
                 else:
                     print_error("bad be syntax", line_address)
                     return
@@ -302,7 +346,16 @@ class Parser:
                 pass
 
             elif tokens[0] == "tfw":
-                pass
+                # Returning from function call
+                if len(self.call_stack) > 1:
+                    line_address = self.call_stack.pop()["return_address"]
+                # Returning from main
+                elif len(self.call_stack) == 1:
+                    self.call_stack.pop()
+                    return
+                else:
+                    print_error("unexpected tfw", line_address)
+                    return
 
             elif tokens[0] == "wew" and tokens_len > 1:
                 try:
@@ -316,7 +369,7 @@ class Parser:
 
                     if len(split_tokens) == 1 and len(call["params"]) == 0:
                         self.functions[func_name]["return_address"] = line_address + 1
-                        line_address = call["start_address"] + 1
+                        line_address = call["start_address"]
                         continue
                     elif len(split_tokens) >= 3 and split_tokens[1] == "(" and split_tokens[-1] == ")":
                         args = []
@@ -337,6 +390,9 @@ class Parser:
                 condition_scope_stack.append(TRUE)
 
                 result = self.parse_expression(tokens[1:])
+                if result is None:
+                    print_error("bad expression", line_address)
+                    return
                 if result in truefalse:
                     condition_execution_stack.append(result)
                 else:
@@ -356,9 +412,10 @@ class Parser:
             # Syntax: >inb4 i from start to end (by step)
             elif tokens[0] == "inb4":
                 if tokens_len == 8 and tokens[2] == "from" and tokens[3].isdigit() and tokens[4] == "to" \
-                        and tokens[5].isdigit() and tokens[6] == "by" and tokens[7].isdigit() \
-                        and tokens[1] not in self.variables:
-                    self.add_variable(tokens[1], int(tokens[3]))
+                        and tokens[5].isdigit() and tokens[6] == "by" and tokens[7].isdigit():
+                    if not self.add_variable(tokens[1], int(tokens[3])):
+                        print_error("bad variable", line_address)
+                        return
                     loop_stack.append({"line_pos": line_address,
                                       "counter": tokens[1],
                                       "start": int(tokens[3]),
@@ -373,12 +430,13 @@ class Parser:
                 if tokens[1] == "inb4":
                     if len(loop_stack) > 0:
                         call = loop_stack[-1]
-                        self.variables[call["counter"]] += call["step"]
-                        if (call["step"] > 0 and self.variables[call["counter"]] < call["end"]) \
-                                or (call["step"] < 0 and self.variables[call["counter"]] > call["end"]):
+                        self.add_variable(call["counter"], self.get_local_variables()[call["counter"]] + call["step"])
+                        counter = self.get_local_variables()[call["counter"]]
+                        if (call["step"] > 0 and counter < call["end"]) \
+                                or (call["step"] < 0 and counter > call["end"]):
                             line_address = call["line_pos"]
                         else:
-                            del self.variables[call["counter"]]
+                            del self.call_stack[-1]["variables"][call["counter"]]
                             loop_stack.pop()
                     else:
                         print_error("unexpected done inb4", line_address)
@@ -391,7 +449,7 @@ class Parser:
                         condition_execution_stack.pop()
                         # print condition_scope_stack, condition_execution_stack, line_address  # debug line
                     else:
-                        print_error("expected done implying", line_address)
+                        print_error("unexpected done implying", line_address)
                         return
                 else:
                     print_error("what is this", line_address)
