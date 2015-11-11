@@ -76,25 +76,47 @@ Greentext works similarly to C, with a main function and other functions that ca
 - **Main function** is declared with `>dank memes`
 - Code execution begins at main
 - **Functions** can be declared with `>wewlad func_name(params)` and called with `>wew func_name(params)`
-- All functions are returned with `>tfw` (functions don't return any values yet..)
+- All functions are returned with `>tfw expression`
+- Value returned by a function is accessed by `wew`; this variable stores the value of the last "non-void" function called
 
 ````
 >wewlad foo(param1, param2)
     #stuff here
-    >tfw
+    >tfw param1 + param2
 
->wewlad bar                # function takes no arguments
+>wewlad bar                 # function takes no arguments
     #stuff here
-    >tfw
+    >tfw                    # function returns no value
 
 >dank memes
     >wew foo(1, 2)
     >wew bar
+    >be a like wew          # a = 3
     >tfw
 ````
 - All variables declared inside functions are local to the scope of that function
 - Global variables can be declared outside of any function
 
+### Example - Factorial
+
+````
+>wewlad factorial(n)
+  >be result like 1
+  >implying n > 1
+    >be m like n - 1
+    >wew factorial(m)
+    >be result like wew
+  >done implying
+  >tfw n * r
+
+>dank memes
+  >be n like 10
+  >wew factorial(n)
+  >mfw wew                  # Outputs n!
+  >tfw
+````
+
 ### Upcoming Stuff
 - "else if" statements
-- Data structures and memory allocation (maybe????)
+- Multi-token string literals
+- Data structures and pointers??? (Sounds like fun)

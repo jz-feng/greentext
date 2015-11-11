@@ -72,6 +72,8 @@ class Parser:
 
     # Element = {"return_address":, "variables": {"var_name": var_value, ...}}
     call_stack = []
+    # Element = anything
+    return_stack = []
 
     def __init__(self):
         pass
@@ -126,6 +128,8 @@ class Parser:
                     result = t[1:-1]
                 elif is_float(t) or t == "True" or t == "False":
                     result = t
+                elif t == "wew" and len(self.return_stack) > 0:
+                    result = self.return_stack.pop()
                 elif t in self.get_local_variables():
                     result = self.get_local_variables()[t]
                 elif t in self.global_variables:
@@ -144,6 +148,8 @@ class Parser:
                         split_tokens[i] = "True"
                     elif t == FALSE:
                         split_tokens[i] = "False"
+                    elif t == "wew" and len(self.return_stack) > 0:
+                        split_tokens[i] = self.return_stack.pop()
                     elif t in self.get_local_variables():
                         split_tokens[i] = str(self.get_local_variables()[t])
                         i -= 1
@@ -274,12 +280,13 @@ class Parser:
             return
 
         # Second pass
+        # Interpret/execute code
 
         # Element = {"line_pos":, "counter":, "start":, "end":, "step":}
         loop_stack = []
-        # Element = {TRUE/FALSE}
+        # Element = TRUE/FALSE
         condition_execution_stack = []
-        # Element = {TRUE/FALSE}
+        # Element = TRUE/FALSE
         condition_scope_stack = []
 
         # Begin execution at main
@@ -329,12 +336,11 @@ class Parser:
                 # print newline
                 print
 
+            # Syntax: >be var_name like var_value/expression
             elif tokens[0] == "be":
-                # Syntax: >be var_name
                 if tokens_len == 2:
                     var_name = tokens[1]
                     self.add_variable(var_name, "")
-                # Syntax: >be var_name like var_value/expression
                 elif tokens_len > 3 and tokens[2] == "like":
                     var_name = tokens[1]
                     var_value = self.parse_expression(tokens[3:])
@@ -351,6 +357,13 @@ class Parser:
             elif tokens[0] == "tfw":
                 # Returning from function call
                 if len(self.call_stack) > 1:
+                    if tokens_len > 1:
+                        return_val = self.parse_expression(tokens[1:])
+                        if return_val is not None:
+                            if len(self.return_stack) > 0:
+                                self.return_stack[-1] = return_val
+                            else:
+                                self.return_stack.append(return_val)
                     line_address = self.call_stack.pop()["return_address"]
                     continue
                 # Returning from main
