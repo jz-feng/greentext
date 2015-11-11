@@ -14,16 +14,16 @@ Every line must start with the greentext arrow a.k.a. meme arrow '>'
 
 Everything in a line after any '#' is commented out
 
-Boolean values are true = `:^)` false = `:^(`. They are treated as string constants.
+Boolean values are true = `:^)` false = `:^(`. They are actually just string constants.
 
-- Print output with `>mfw`
-- Surround token with double quotes to print as literal
+- **Print output** with `>mfw`
+- As usual, double quotes denote string literal
 - Separate with commas to print multiple values on the same line
 ````
 >mfw 3, 4.5, "string"   # Outputs 3 4.5 string
 >mfw 3 < 5,  3 * 4 - 5  # Outputs :^) 7
 ````
-- Declare and assign variables with `>be like`
+- **Declare and assign variables** with `>be like`
 - Format: `>be var_name like var_value`
 ````
 >be me like 19              # me = 19
@@ -31,8 +31,8 @@ Boolean values are true = `:^)` false = `:^(`. They are treated as string consta
 >be foo                     # foo = no value (empty string)
 
 ````
-- Conditional statements are done with `>implying`
-- `>implying` begins an if statement; `>or not` begins the else branch; `>done implying` ends the if statement
+- **Conditional statements** are done with `>implying`
+- `>implying` is "if"; `>or not` is "else"; `>done implying` is "end if"
 - Condition can be any expression that evaluates to a Boolean value
   - `a is b` a == b
   - `a isn't b` a != b
@@ -44,7 +44,7 @@ Boolean values are true = `:^)` false = `:^(`. They are treated as string consta
   >mfw "false"    # Outputs false
 >done implying
 ````
-- For loops are done with `>inb4`
+- **For loops** are done with `>inb4`
 - Format: `>inb4 counter_name from start to end by step`; `>done inb4` indicates end of loop
 ````
 >inb4 i from 10 to 0 by -2
@@ -73,10 +73,10 @@ Boolean values are true = `:^)` false = `:^(`. They are treated as string consta
 
 Greentext works similarly to C, with a main function and other functions that can be defined and called
 
-- Main function is declared with `>dank memes`
+- **Main function** is declared with `>dank memes`
 - Code execution begins at main
-- Functions can be declared with `>wewlad func_name(params)` and called with `>wew func_name(params)`
-- All functions (including main) are returned with `>tfw` (functions don't return any values yet..)
+- **Functions** can be declared with `>wewlad func_name(params)` and called with `>wew func_name(params)`
+- All functions are returned with `>tfw` (functions don't return any values yet..)
 
 ````
 >wewlad foo(param1, param2)
