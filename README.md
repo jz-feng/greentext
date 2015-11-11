@@ -6,7 +6,7 @@ Do you love coding? Do you enjoy some good greentext stories and dank memes? Wit
 
 ### Usage
 
-The parser takes input from stdin. Run it and write code, or pass a pre-written input file into it. You know the drill.
+The interpreter takes input from stdin. Run it and write code, or pass a pre-written input file into it.
 
 ### The language
 
@@ -14,10 +14,10 @@ Every line must start with the greentext arrow a.k.a. meme arrow '>'
 
 Everything in a line after any '#' is commented out
 
-Boolean values are true = `:^)` false = `:^{`. They are treated as string constants.
+Boolean values are true = `:^)` false = `:^(`. They are treated as string constants.
 
 - Print output with `>mfw`
-- Surround token with double quotes to print as literal; multi-token literals coming soon!!11!
+- Surround token with double quotes to print as literal
 - Separate with commas to print multiple values on the same line
 ````
 >mfw 3, 4.5, "string"   # Outputs 3 4.5 string
@@ -26,19 +26,19 @@ Boolean values are true = `:^)` false = `:^{`. They are treated as string consta
 - Declare and assign variables with `>be like`
 - Format: `>be var_name like var_value`
 ````
->be me like 19
->be var like 1 * 2 - (3 - 4)
->be rare_pepe like me + var
->mfw rare_pepe      # Outputs 22.0
+>be me like 19              # me = 19
+>be var like 1 * 2 + me     # var = 21
+>be foo                     # foo = no value (empty string)
+
 ````
 - Conditional statements are done with `>implying`
 - `>implying` begins an if statement; `>or not` begins the else branch; `>done implying` ends the if statement
-- Conditional expression can be either a variable, comparison of constants, or comparison of variables
+- Condition can be any expression that evaluates to a Boolean value
   - `a is b` a == b
   - `a isn't b` a != b
   - >, <, >=, <= work the same way
 ````
->implying 3 is 4
+>implying 3 is 4 and 7 > 5
   >mfw "true"
 >or not
   >mfw "false"    # Outputs false
@@ -56,19 +56,45 @@ Boolean values are true = `:^)` false = `:^{`. They are treated as string consta
 
 ````
 >inb4 i from 0 to 100 by 1
-    >implying i % 15 is 0
-        >mfw "fizzbuzz", i
-    >or not
-        >implying i % 3 is 0
-            >mfw "fizz", i
-        >done implying
-        >implying i % 5 is 0
-            >mfw "buzz", i
-        >done implying
-	  >done implying
+  >implying i % 15 is 0
+    >mfw "fizzbuzz", i
+  >or not
+    >implying i % 3 is 0
+      >mfw "fizz", i
+    >done implying
+    >implying i % 5 is 0
+      >mfw "buzz", i
+    >done implying
+  >done implying
 >done inb4
 ````
 
-### Planned functionalities
+### Program Structure
+
+Greentext works similarly to C, with a main function and other functions that can be defined and called
+
+- Main function is declared with `>dank memes`
+- Code execution begins at main
+- Functions can be declared with `>wewlad func_name(params)` and called with `>wew func_name(params)`
+- All functions (including main) are returned with `>tfw` (functions don't return any values yet..)
+
+````
+>wewlad foo(param1, param2)
+    #stuff here
+    >tfw
+
+>wewlad bar                # function takes no arguments
+    #stuff here
+    >tfw
+
+>dank memes
+    >wew foo(1, 2)
+    >wew bar
+    >tfw
+````
+- All variables declared inside functions are local to the scope of that function
+- Global variables can be declared outside of any function
+
+### Upcoming Stuff
 - "else if" statements
-- Functions and procedures
+- Data structures and memory allocation (maybe????)
