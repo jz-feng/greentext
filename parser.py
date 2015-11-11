@@ -28,6 +28,43 @@ def print_error(message, line_address):
         print "wtf:", message, "at line", line_address + 1
 
 
+# noinspection PyPep8Naming
+def parse_signature(split_tokens):
+    # DFA to check function signature syntax
+    ST_START = 0
+    ST_LPAREN = 1
+    ST_ID = 2
+    ST_COMMA = 3
+    ST_RPAREN = 4
+
+    params = []
+    i = 0
+    state = ST_START
+    while i < len(split_tokens):
+        t = split_tokens[i]
+        if state == ST_START and t == "(":
+            state = ST_LPAREN
+        elif state == ST_LPAREN:
+            if t == ")":
+                state = ST_RPAREN
+            else:
+                state = ST_ID
+                params.append(t)
+        elif state == ST_ID and t == ",":
+            state = ST_COMMA
+        elif state == ST_ID and t == ")":
+            state = ST_RPAREN
+        elif state == ST_COMMA:
+            state = ST_ID
+            params.append(t)
+        else:
+            raise StandardError
+        i += 1
+    if state != ST_RPAREN:
+        raise StandardError
+    return params
+
+
 class Parser:
 
     global_variables = {}
@@ -69,9 +106,7 @@ class Parser:
             for p in func_params:
                 if not(len(p) > 0 and p[0].isalpha() and p.isalnum()):
                     return False
-            self.functions[func_name] = {"params": func_params,
-                                         "start_address": start_address + 1,
-                                         "return_address": 0}
+            self.functions[func_name] = {"params": func_params, "start_address": start_address + 1}
             return True
         else:
             return False
@@ -132,7 +167,6 @@ class Parser:
         except (SyntaxError, TypeError):
             return None
 
-    # noinspection PyPep8Naming
     def parse(self, lines):
 
         # First pass
@@ -171,6 +205,9 @@ class Parser:
                 continue
 
             if tokens_len == 2 and tokens[0:2] == ["dank", "memes"]:
+                if is_in_func_def:
+                    print_error("missing tfw before dank memes", line_address)
+                    return
                 is_in_func_def = True
                 main_address = line_address + 1
                 self.add_function("main", [], main_address)
@@ -184,46 +221,16 @@ class Parser:
                         return
 
                     is_in_func_def = True
-                    func_params = []
                     split_tokens = []
                     for t in tokens[1:]:
                         split_tokens.extend([t for t in re.split("(\(|\)|,)", t) if len(t) > 0])
 
                     func_name = split_tokens[0]
                     if len(split_tokens) == 1:
-                        if not self.add_function(func_name, func_params, line_address):
+                        if not self.add_function(func_name, [], line_address):
                             raise StandardError
                     else:
-                        # DFA to check function signature syntax
-                        ST_START = 0
-                        ST_LPAREN = 1
-                        ST_ID = 2
-                        ST_COMMA = 3
-                        ST_RPAREN = 4
-                        j = 1
-                        state = ST_START
-                        while j < len(split_tokens):
-                            tok = split_tokens[j]
-                            if state == ST_START and tok == "(":
-                                state = ST_LPAREN
-                            elif state == ST_LPAREN:
-                                if tok == ")":
-                                    state = ST_RPAREN
-                                else:
-                                    state = ST_ID
-                                    func_params.append(tok)
-                            elif state == ST_ID and tok == ",":
-                                state = ST_COMMA
-                            elif state == ST_ID and tok == ")":
-                                state = ST_RPAREN
-                            elif state == ST_COMMA:
-                                state = ST_ID
-                                func_params.append(tok)
-                            else:
-                                raise StandardError
-                            j += 1
-                        if state != ST_RPAREN:
-                            raise StandardError
+                        func_params = parse_signature(split_tokens[1:])
                         if not self.add_function(func_name, func_params, line_address):
                             raise StandardError
                 except StandardError:
@@ -341,14 +348,11 @@ class Parser:
                     print_error("bad be syntax", line_address)
                     return
 
-            # Do nothing, these have been taken care of in the first pass
-            elif tokens[0] == "memes" or tokens[0] == "wewlad":
-                pass
-
             elif tokens[0] == "tfw":
                 # Returning from function call
                 if len(self.call_stack) > 1:
                     line_address = self.call_stack.pop()["return_address"]
+                    continue
                 # Returning from main
                 elif len(self.call_stack) == 1:
                     self.call_stack.pop()
@@ -357,32 +361,51 @@ class Parser:
                     print_error("unexpected tfw", line_address)
                     return
 
-            elif tokens[0] == "wew" and tokens_len > 1:
+            elif tokens[0] == "wew":
                 try:
+                    if tokens_len < 2:
+                        raise StandardError
+
                     split_tokens = []
                     for t in tokens[1:]:
                         split_tokens.extend([t for t in re.split("(\(|\)|,)", t) if len(t) > 0])
-                    print split_tokens
-                    func_name = split_tokens[0]
-                    call = self.functions[func_name]
-                    print call
 
-                    if len(split_tokens) == 1 and len(call["params"]) == 0:
-                        self.functions[func_name]["return_address"] = line_address + 1
-                        line_address = call["start_address"]
-                        continue
-                    elif len(split_tokens) >= 3 and split_tokens[1] == "(" and split_tokens[-1] == ")":
-                        args = []
-                        for i in range(2, len(split_tokens) - 1):
-                            if i == len(split_tokens) - 2:              # last param
-                                args.append(split_tokens[i])
-                            elif split_tokens[i + 1] == ",":            # other params must be followed by comma
-                                args.append(split_tokens[i])
-                            elif split_tokens[i] != ",":
-                                raise StandardError
-                        print args
+                    func_name = split_tokens[0]
+                    if func_name not in self.functions:
+                        print_error("wewlad not found", line_address)
+                        return
+                    function = self.functions[func_name]
+
+                    if len(split_tokens) == 1:
+                        if len(function["params"]) == 0:
+                            self.call_stack.append({"return_address": line_address + 1, "variables": {}})
+                            line_address = function["start_address"]
+                            continue
+                        else:
+                            raise StandardError
+                    else:
+                        func_params = parse_signature(split_tokens[1:])
+                        for i in range(0, len(func_params)):
+                            p = func_params[i]
+                            if is_literal(p):
+                                func_params[i] = p[1:-1]
+                            elif p in self.get_local_variables():
+                                func_params[i] = self.get_local_variables()[p]
+                            elif p in self.global_variables:
+                                func_params[i] = self.global_variables[p]
+
+                        # print func_params
+                        if len(function["params"]) == len(func_params):
+                            variables = {}
+                            for i in range(0, len(function["params"])):
+                                variables[function["params"][i]] = func_params[i]
+                            self.call_stack.append({"return_address": line_address + 1, "variables": variables})
+                            line_address = function["start_address"]
+                            continue
+                        else:
+                            raise StandardError
                 except StandardError:
-                    print "wtf can't wew this"
+                    print_error("bad wew signature", line_address)
                     return
 
             # Syntax: >implying boolean_var/boolean_expression
