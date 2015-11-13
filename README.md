@@ -2,7 +2,7 @@
 
 ### Still work in progress
 
-Do you love coding? Do you enjoy some good greentext stories and dank memes? With this interpreter you can **write code in greentext**!!!111!!11!
+Do you love coding? Do you enjoy dank memes? With this interpreter you can **write code in greentext**!!!111!!11!
 
 ### Usage
 
@@ -14,7 +14,7 @@ Every line must start with the greentext arrow a.k.a. meme arrow '>'
 
 Everything in a line after any '#' is commented out
 
-Boolean values are true = `:^)` false = `:^(`. They are actually just string constants.
+Boolean values are true = `:^)` false = `:^(`.
 
 - **Print output** with `>mfw`
 - As usual, double quotes denote string literal
@@ -26,9 +26,9 @@ Boolean values are true = `:^)` false = `:^(`. They are actually just string con
 - **Declare and assign variables** with `>be like`
 - Format: `>be var_name like var_value`
 ````
->be me like 19              # me = 19
->be var like 1 * 2 + me     # var = 21
->be foo                     # foo = no value (empty string)
+>be foo like 19             # foo = 19
+>be var like 1 * 2 + foo    # var = 21
+>be bar                     # bar = no value (empty string)
 
 ````
 - **Conditional statements** are done with `>implying`
@@ -73,7 +73,7 @@ Boolean values are true = `:^)` false = `:^(`. They are actually just string con
 
 Greentext works similarly to C, with a main function and other functions that can be defined and called
 
-- **Main function** is declared with `>dank memes`
+- **Main function** is declared with `>be me`
 - Code execution begins at main
 - **Functions** can be declared with `>wewlad func_name(params)` and called with `>wew func_name(params)`
 - All functions are returned with `>tfw expression`
@@ -112,7 +112,7 @@ Greentext works similarly to C, with a main function and other functions that ca
 >dank memes
   >be n like 10
   >wew factorial(n)
-  >mfw wew                  # Outputs n!
+  >mfw "factorial of", n, "is", wew
   >tfw
 ````
 

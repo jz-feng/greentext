@@ -9,8 +9,8 @@ FALSE = ":^("
 truefalse = [TRUE, FALSE]
 
 
-def is_literal(token):
-    return (token.startswith('\'') and token.endswith('\'')) or (token.startswith('\"') and token.endswith('\"'))
+def is_token_literal(token):
+    return token.startswith('\'') and token.endswith('\'')
 
 
 def is_float(token):
@@ -26,6 +26,46 @@ def print_error(message, line_address):
         print "wtf:", message
     else:
         print "wtf:", message, "at line", line_address + 1
+
+
+def parse_literals(line):
+    tokens = [t for t in re.split(r"(\")", line) if len(t) > 0]
+    if len(tokens) > 0 and tokens[-1].endswith("\n"):   # Remove newline char
+        tokens[-1] = tokens[-1][:-1]
+    if len(tokens) > 1:
+        is_literal = False
+        i = 0
+        while i < len(tokens):
+            t = tokens[i]
+            if is_literal:
+                if t == "\"":
+                    if tokens[i - 1] != "\"":
+                        tokens[i - 1] += "'"    # Suffix with single quote
+                    is_literal = False
+                else:
+                    if tokens[i - 1] == "\"":
+                        tokens[i] = "'" + t     # Prefix with single quote
+                    else:
+                        # Combine current token with previous token, remove current token, don't increment index
+                        tokens[i - 1] = tokens[i - 1] + " " + t
+                        del tokens[i]
+                        i -= 1
+            else:
+                if t == "\"":
+                    is_literal = True
+            i += 1
+    # Remove "s from tokens stream
+    return [t for t in tokens if len(t) > 0 and t != "\""]
+
+
+def parse_tokens(tokens):
+    split_tokens = []
+    for t in tokens:
+        if is_token_literal(t):
+            split_tokens.append(t)
+        else:
+            split_tokens.extend(t.split())
+    return split_tokens
 
 
 # noinspection PyPep8Naming
@@ -58,11 +98,15 @@ def parse_signature(split_tokens):
             state = ST_ID
             params.append(t)
         else:
-            raise StandardError
+            raise GreentextError
         i += 1
     if state != ST_RPAREN:
-        raise StandardError
+        raise GreentextError
     return params
+
+
+class GreentextError(SyntaxError):
+    """Custom Greentext syntax error"""
 
 
 class Parser:
@@ -100,14 +144,17 @@ class Parser:
             return {}
 
     def add_function(self, func_name, func_params, start_address):
-        if len(func_name) > 0 and func_name[0].isalpha() and func_name.isalnum():
+        if len(func_name) > 0 and func_name[0].isalpha() and func_name.isalnum()\
+                and func_name not in self.functions:
             # Check for duplicate params
             if len(func_params) != len(set(func_params)):
                 return False
 
+            # Check params format
             for p in func_params:
                 if not(len(p) > 0 and p[0].isalpha() and p.isalnum()):
                     return False
+
             self.functions[func_name] = {"params": func_params, "start_address": start_address + 1}
             return True
         else:
@@ -117,17 +164,20 @@ class Parser:
         try:
             split_tokens = []
             for t in src_tokens:
-                # Replace :^)/:^( with true/false since parentheses will be split from the tokens
-                t = t.replace("\":^)\"", "True")
-                t = t.replace("\":^(\"", "False")
-                split_tokens.extend([t for t in re.split("(\(|\)|\*|/|\+|\-|%|<|>|<=|>=)", t) if len(t) > 0])
+                if is_token_literal(t):
+                    split_tokens.append(t)
+                else:
+                    # Replace :^)/:^( with true/false since parentheses will be split from the tokens
+                    t = t.replace(TRUE, "True")
+                    t = t.replace(FALSE, "False")
+                    split_tokens.extend([t for t in re.split("(\(|\)|\*|/|\+|\-|%|<|>|<=|>=|\")", t) if len(t) > 0])
             result = ""
             if len(split_tokens) == 1:
                 t = split_tokens[0]
-                if is_literal(t):
-                    result = t[1:-1]
-                elif is_float(t) or t == "True" or t == "False":
+                if is_float(t) or t == "True" or t == "False":
                     result = t
+                elif is_token_literal(t):   # Strip single quotes
+                    result = t[1:-1]
                 elif t == "wew" and len(self.return_stack) > 0:
                     result = self.return_stack.pop()
                 elif t in self.get_local_variables():
@@ -135,12 +185,15 @@ class Parser:
                 elif t in self.global_variables:
                     result = self.global_variables[t]
                 else:
-                    raise SyntaxError
+                    raise GreentextError
             elif len(split_tokens) > 1:
                 i = 0
                 while i < len(split_tokens):
                     t = split_tokens[i]
-                    if t == "is":
+                    if is_float(t) or is_token_literal(t) or \
+                            t in ["True", "False", "(", ")", "*", "/", "+", "-", "%", "<", ">"]:
+                        pass
+                    elif t == "is":
                         split_tokens[i] = "=="
                     elif t == "isn\'t":
                         split_tokens[i] = "!="
@@ -156,21 +209,21 @@ class Parser:
                     elif t in self.global_variables:
                         split_tokens[i] = str(self.global_variables[t])
                         i -= 1
-                    elif is_float(t) or is_literal(t) or \
-                            t in ["True", "False", "(", ")", "*", "/", "+", "-", "%", "<", ">"]:
-                        split_tokens[i] = t
                     else:
-                        raise SyntaxError
+                        raise GreentextError
                     i += 1
-                result = str(eval(" ".join(split_tokens)))
-                # print result  # debug line
+
+                try:
+                    result = str(eval(" ".join(split_tokens)))
+                except (SyntaxError, TypeError, NameError):
+                    return None
             if result == "True":
                 return TRUE
             elif result == "False":
                 return FALSE
             else:
                 return result
-        except (SyntaxError, TypeError):
+        except GreentextError:
             return None
 
     def parse(self, lines):
@@ -185,13 +238,17 @@ class Parser:
         is_in_func_def = False
 
         while line_address < len(lines):
-            tokens = lines[line_address].split()
+            # Extract string literals, store as tokens
+            literals_tokens = parse_literals(lines[line_address])
+
+            # Tokenize the rest of the line
+            tokens = parse_tokens(literals_tokens)
 
             # Remove commented tokens
             i = 0
             while i < len(tokens):
                 t = tokens[i]
-                if '#' in t:
+                if not is_token_literal(t) and '#' in t:
                     tokens[i] = t.partition('#')[0]
                     i += 1
                     break
@@ -210,18 +267,20 @@ class Parser:
                 line_address += 1
                 continue
 
-            if tokens_len == 2 and tokens[0:2] == ["dank", "memes"]:
+            if tokens_len == 2 and tokens[0:2] == ["be", "me"]:
                 if is_in_func_def:
-                    print_error("missing tfw before dank memes", line_address)
+                    print_error("missing tfw before be me", line_address)
                     return
                 is_in_func_def = True
                 main_address = line_address + 1
-                self.add_function("main", [], main_address)
+                if not self.add_function("main", [], main_address):
+                    print_error("duplicate be me", line_address)
+                    return
 
             elif tokens[0] == "wewlad":
                 try:
                     if tokens_len < 2:
-                        raise StandardError
+                        raise GreentextError
                     if is_in_func_def:
                         print_error("can't wewlad inside wewlad", line_address)
                         return
@@ -234,12 +293,12 @@ class Parser:
                     func_name = split_tokens[0]
                     if len(split_tokens) == 1:
                         if not self.add_function(func_name, [], line_address):
-                            raise StandardError
+                            raise GreentextError
                     else:
                         func_params = parse_signature(split_tokens[1:])
                         if not self.add_function(func_name, func_params, line_address):
-                            raise StandardError
-                except StandardError:
+                            raise GreentextError
+                except GreentextError:
                     print_error("bad wewlad signature", line_address)
                     return
 
@@ -253,10 +312,10 @@ class Parser:
             # Process global variable declarations
             if not is_in_func_def:
                 if tokens[0] == "be":
-                    if tokens_len == 2:
+                    if tokens_len == 2 and tokens[1] != "me":
                         var_name = tokens[1]
                         self.add_global_variable(var_name, "")
-                    elif tokens_len > 3 and tokens[2] == "like":
+                    elif tokens_len > 3 and tokens[1] != "me" and tokens[2] == "like":
                         var_name = tokens[1]
                         var_value = self.parse_expression(tokens[3:])
                         if var_value is None:
@@ -273,7 +332,7 @@ class Parser:
             line_address += 1
 
         if main_address == -1:
-            print_error("no memes found", -1)
+            print_error("be me not found", -1)
             return
         if is_in_func_def:
             print_error("missing tfw at EOF", -1)
@@ -338,10 +397,10 @@ class Parser:
 
             # Syntax: >be var_name like var_value/expression
             elif tokens[0] == "be":
-                if tokens_len == 2:
+                if tokens_len == 2 and tokens[1] != "me":
                     var_name = tokens[1]
                     self.add_variable(var_name, "")
-                elif tokens_len > 3 and tokens[2] == "like":
+                elif tokens_len > 3 and tokens[1] != "me" and tokens[2] == "like":
                     var_name = tokens[1]
                     var_value = self.parse_expression(tokens[3:])
                     if var_value is None:
@@ -377,7 +436,7 @@ class Parser:
             elif tokens[0] == "wew":
                 try:
                     if tokens_len < 2:
-                        raise StandardError
+                        raise GreentextError
 
                     split_tokens = []
                     for t in tokens[1:]:
@@ -395,14 +454,14 @@ class Parser:
                             line_address = function["start_address"]
                             continue
                         else:
-                            raise StandardError
+                            raise GreentextError
                     else:
                         func_params = parse_signature(split_tokens[1:])
                         for i in range(0, len(func_params)):
                             p = func_params[i]
-                            if is_literal(p):
+                            if is_token_literal(p):
                                 func_params[i] = p[1:-1]
-                            elif p in self.get_local_variables():
+                            if p in self.get_local_variables():
                                 func_params[i] = self.get_local_variables()[p]
                             elif p in self.global_variables:
                                 func_params[i] = self.global_variables[p]
@@ -416,8 +475,8 @@ class Parser:
                             line_address = function["start_address"]
                             continue
                         else:
-                            raise StandardError
-                except StandardError:
+                            raise GreentextError
+                except GreentextError:
                     print_error("bad wew signature", line_address)
                     return
 
