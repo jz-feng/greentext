@@ -103,8 +103,7 @@ Greentext works similarly to C, with a main function and other functions that ca
 >wewlad factorial(n)
   >be result like 1
   >implying n > 1
-    >be m like n - 1
-    >wew factorial(m)
+    >wew factorial(n - 1)
     >be result like wew
   >done implying
   >tfw n * r
@@ -118,5 +117,4 @@ Greentext works similarly to C, with a main function and other functions that ca
 
 ### Upcoming Stuff
 - "else if" statements
-- Multi-token string literals
 - Data structures and pointers??? (Sounds like fun)

@@ -68,43 +68,6 @@ def parse_tokens(tokens):
     return split_tokens
 
 
-# noinspection PyPep8Naming
-def parse_signature(split_tokens):
-    # DFA to check function signature syntax
-    ST_START = 0
-    ST_LPAREN = 1
-    ST_ID = 2
-    ST_COMMA = 3
-    ST_RPAREN = 4
-
-    params = []
-    i = 0
-    state = ST_START
-    while i < len(split_tokens):
-        t = split_tokens[i]
-        if state == ST_START and t == "(":
-            state = ST_LPAREN
-        elif state == ST_LPAREN:
-            if t == ")":
-                state = ST_RPAREN
-            else:
-                state = ST_ID
-                params.append(t)
-        elif state == ST_ID and t == ",":
-            state = ST_COMMA
-        elif state == ST_ID and t == ")":
-            state = ST_RPAREN
-        elif state == ST_COMMA:
-            state = ST_ID
-            params.append(t)
-        else:
-            raise GreentextError
-        i += 1
-    if state != ST_RPAREN:
-        raise GreentextError
-    return params
-
-
 class GreentextError(SyntaxError):
     """Custom Greentext syntax error"""
 
@@ -226,6 +189,53 @@ class Parser:
         except GreentextError:
             return None
 
+    # noinspection PyPep8Naming
+    def parse_signature(self, split_tokens, allow_exprs):
+        # DFA to check function signature syntax
+        ST_START = 0
+        ST_LPAREN = 1
+        ST_ID = 2
+        ST_COMMA = 3
+        ST_RPAREN = 4
+
+        params = []
+        param_tokens = []
+        state = ST_START
+        for t in split_tokens:
+            if state == ST_START and t == "(":      # (
+                state = ST_LPAREN
+            elif state == ST_LPAREN:
+                if t == ")":                        # ( )
+                    state = ST_RPAREN
+                else:                               # ( abc
+                    state = ST_ID
+                    param_tokens.append(t)
+            elif state == ST_ID:
+                if t == "," or t == ")":            # ( abc , OR ( abc )
+                    state = ST_COMMA if t == "," else ST_RPAREN
+                    if allow_exprs:
+                        param_result = self.parse_expression(param_tokens)
+                        param_tokens = []
+                        if param_result is not None:
+                            params.append(param_result)
+                        else:
+                            raise GreentextError
+                    else:
+                        params.append(param_tokens[0])
+                        param_tokens = []
+                elif allow_exprs:                   # ( abc bcd
+                    param_tokens.append(t)
+                else:
+                    raise GreentextError
+            elif state == ST_COMMA:                 # ( abc , bcd
+                state = ST_ID
+                param_tokens.append(t)
+            else:
+                raise GreentextError
+        if state != ST_RPAREN:
+            raise GreentextError
+        return params
+
     def parse(self, lines):
 
         # First pass
@@ -295,7 +305,7 @@ class Parser:
                         if not self.add_function(func_name, [], line_address):
                             raise GreentextError
                     else:
-                        func_params = parse_signature(split_tokens[1:])
+                        func_params = self.parse_signature(split_tokens[1:], False)
                         if not self.add_function(func_name, func_params, line_address):
                             raise GreentextError
                 except GreentextError:
@@ -456,7 +466,7 @@ class Parser:
                         else:
                             raise GreentextError
                     else:
-                        func_params = parse_signature(split_tokens[1:])
+                        func_params = self.parse_signature(split_tokens[1:], True)
                         for i in range(0, len(func_params)):
                             p = func_params[i]
                             if is_token_literal(p):
