@@ -73,8 +73,8 @@ Boolean values are true = `:^)` false = `:^(`.
 
 Greentext works similarly to C, with a main function and other functions that can be defined and called
 
-- **Main function** is declared with `>be me`
-- Code execution begins at main
+- **Main function** is declared with `>be me` and returned with `>thank mr skeltal`
+- `>thank mr skeltal` also works as system exit; it can be called anywhere to terminate program execution.
 - **Functions** can be declared with `>wewlad func_name(params)` and called with `>wew func_name(params)`
 - All functions are returned with `>tfw expression`
 - Value returned by a function is accessed by `wew`; this variable stores the value of the last "non-void" function called
@@ -88,11 +88,11 @@ Greentext works similarly to C, with a main function and other functions that ca
     #stuff here
     >tfw                    # function returns no value
 
->dank memes
+>be me
     >wew foo(1, 2)
     >wew bar
     >be a like wew          # a = 3
-    >tfw
+    >thank mr skeltal
 ````
 - All variables declared inside functions are local to the scope of that function
 - Global variables can be declared outside of any function
@@ -108,13 +108,14 @@ Greentext works similarly to C, with a main function and other functions that ca
   >done implying
   >tfw n * r
 
->dank memes
+>be me
   >be n like 10
   >wew factorial(n)
   >mfw "factorial of", n, "is", wew
-  >tfw
+  >thank mr skeltal
 ````
 
 ### Upcoming Stuff
 - "else if" statements
+- inline function calls
 - Data structures and pointers??? (Sounds like fun)

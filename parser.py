@@ -246,6 +246,7 @@ class Parser:
         line_address = 0
         main_address = -1
         is_in_func_def = False
+        is_in_main_def = False
 
         while line_address < len(lines):
             # Extract string literals, store as tokens
@@ -277,11 +278,11 @@ class Parser:
                 line_address += 1
                 continue
 
-            if tokens_len == 2 and tokens[0:2] == ["be", "me"]:
+            if tokens == ["be", "me"]:
                 if is_in_func_def:
                     print_error("missing tfw before be me", line_address)
                     return
-                is_in_func_def = True
+                is_in_main_def = True
                 main_address = line_address + 1
                 if not self.add_function("main", [], main_address):
                     print_error("duplicate be me", line_address)
@@ -293,6 +294,9 @@ class Parser:
                         raise GreentextError
                     if is_in_func_def:
                         print_error("can't wewlad inside wewlad", line_address)
+                        return
+                    if is_in_main_def:
+                        print_error("don't forget to thank mr skeltal", line_address)
                         return
 
                     is_in_func_def = True
@@ -319,8 +323,11 @@ class Parser:
                     print_error("unexpected tfw", line_address)
                     return
 
+            elif tokens == ["thank", "mr", "skeltal"]:
+                is_in_main_def = False
+
             # Process global variable declarations
-            if not is_in_func_def:
+            if not (is_in_func_def or is_in_main_def):
                 if tokens[0] == "be":
                     if tokens_len == 2 and tokens[1] != "me":
                         var_name = tokens[1]
@@ -346,6 +353,9 @@ class Parser:
             return
         if is_in_func_def:
             print_error("missing tfw at EOF", -1)
+            return
+        if is_in_main_def:
+            print_error("don't forget to thank mr skeltal", -1)
             return
 
         # Second pass
@@ -375,8 +385,8 @@ class Parser:
             # Skip line if this is not the right conditional branch UNLESS for conditional statements
             if (condition_scope_stack != condition_execution_stack) \
                     and not ((tokens[0] == "implying")
-                    or (tokens_len == 2 and tokens[0:2] == ["or", "not"])
-                    or (tokens_len == 2 and tokens[0:2] == ["done", "implying"])):
+                    or (tokens == ["or", "not"])
+                    or (tokens == ["done", "implying"])):
                 line_address += 1
                 continue
 
@@ -506,7 +516,7 @@ class Parser:
                 # print condition_scope_stack, condition_execution_stack, line_address  # debug line
 
             # Syntax: >or not
-            elif tokens_len == 2 and tokens[0:2] == ["or", "not"]:
+            elif tokens == ["or", "not"]:
                 if len(condition_scope_stack) > 0:
                     condition_scope_stack[-1] = FALSE
                 else:
@@ -530,35 +540,32 @@ class Parser:
                     print_error("bad inb4 syntax", line_address)
                     return
 
-            elif tokens[0] == "done" and tokens_len > 1:
-                # Syntax: >done inb4
-                if tokens[1] == "inb4":
-                    if len(loop_stack) > 0:
-                        call = loop_stack[-1]
-                        self.add_variable(call["counter"], self.get_local_variables()[call["counter"]] + call["step"])
-                        counter = self.get_local_variables()[call["counter"]]
-                        if (call["step"] > 0 and counter < call["end"]) \
-                                or (call["step"] < 0 and counter > call["end"]):
-                            line_address = call["line_pos"]
-                        else:
-                            del self.call_stack[-1]["variables"][call["counter"]]
-                            loop_stack.pop()
+            elif tokens == ["done", "inb4"]:
+                if len(loop_stack) > 0:
+                    call = loop_stack[-1]
+                    self.add_variable(call["counter"], self.get_local_variables()[call["counter"]] + call["step"])
+                    counter = self.get_local_variables()[call["counter"]]
+                    if (call["step"] > 0 and counter < call["end"]) \
+                            or (call["step"] < 0 and counter > call["end"]):
+                        line_address = call["line_pos"]
                     else:
-                        print_error("unexpected done inb4", line_address)
-                        return
-
-                # Syntax: >done implying
-                elif tokens[1] == "implying":
-                    if len(condition_scope_stack) > 0:
-                        condition_scope_stack.pop()
-                        condition_execution_stack.pop()
-                        # print condition_scope_stack, condition_execution_stack, line_address  # debug line
-                    else:
-                        print_error("unexpected done implying", line_address)
-                        return
+                        del self.call_stack[-1]["variables"][call["counter"]]
+                        loop_stack.pop()
                 else:
-                    print_error("what is this", line_address)
+                    print_error("unexpected done inb4", line_address)
                     return
+
+            elif tokens == ["done", "implying"]:
+                if len(condition_scope_stack) > 0:
+                    condition_scope_stack.pop()
+                    condition_execution_stack.pop()
+                    # print condition_scope_stack, condition_execution_stack, line_address  # debug line
+                else:
+                    print_error("unexpected done implying", line_address)
+                    return
+
+            elif tokens == ["thank", "mr", "skeltal"]:
+                exit()
 
             # Undefined token
             else:
