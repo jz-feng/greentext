@@ -592,5 +592,5 @@ class Parser:
 
         self.parse(inputlines)
 
-
-Parser().main()
+if __name__ == "__main__":
+    Parser().main()
