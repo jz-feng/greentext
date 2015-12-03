@@ -10,7 +10,7 @@ truefalse = [TRUE, FALSE]
 
 
 def is_token_literal(token):
-    return token.startswith('\'') and token.endswith('\'')
+    return str(token).startswith('\'') and str(token).endswith('\'')
 
 
 def is_float(token):
