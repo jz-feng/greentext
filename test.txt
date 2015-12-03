@@ -1,0 +1,30 @@
+>wewlad factor(number, fcheck)
+  >be result like 0
+  >implying number % fcheck is 0
+    >be result like fcheck
+  >done implying
+  >tfw result
+
+>be me
+
+  # Replace number_to_check with the number that should be checked
+  # for deficiency or abundancy. 
+
+  >be n like 18
+  >be total like 0
+  >be half like n / 2
+  >be halfplusone like half + 1
+
+  >inb4 i from 1 to halfplusone by 1
+  >mfw i
+    >wew factor(n, i)
+    >be factor like wew
+    >be totalcopy like total
+    >be total like factor + totalcopy
+  >done inb4
+  >implying total > n
+    >mfw n, "abundant by", total - n
+  >or not
+    >mfw n, "deficient"
+  >done implying
+  >thank mr skeltal
