@@ -10,7 +10,7 @@ truefalse = [TRUE, FALSE]
 
 
 def is_token_literal(token):
-    return token.startswith('\'') and token.endswith('\'')
+    return str(token).startswith('\'') and str(token).endswith('\'')
 
 
 def is_float(token):
@@ -526,15 +526,19 @@ class Parser:
             elif tokens[0] == "inb4":
                 try:
                     if tokens_len == 8 and tokens[2] == "from" and tokens[4] == "to" and tokens[6] == "by":
-                        start_val = self.parse_expression(tokens[3])
-                        end_val = self.parse_expression()
+                        start_val = self.parse_expression(tokens[3:4])
+                        end_val = self.parse_expression(tokens[5:6])
+                        if start_val is None or end_val is None or (not start_val.isdigit()) or (not end_val.isdigit()):
+                            raise GreentextError
+                        start_val = int(start_val)
+                        end_val = int(end_val)
                         if not self.add_variable(tokens[1], start_val):
                             print_error("bad variable", line_address)
                             return
                         loop_stack.append({"line_pos": line_address,
                                           "counter": tokens[1],
-                                          "start": int(tokens[3]),
-                                          "end": int(tokens[5]),
+                                          "start": start_val,
+                                          "end": end_val,
                                           "step": int(tokens[7])})
                     else:
                         raise GreentextError
@@ -594,5 +598,5 @@ class Parser:
 
         self.parse(inputlines)
 
-
-Parser().main()
+if __name__ == "__main__":
+    Parser().main()
