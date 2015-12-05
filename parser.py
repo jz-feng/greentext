@@ -133,7 +133,7 @@ class Parser:
                     # Replace :^)/:^( with true/false since parentheses will be split from the tokens
                     t = t.replace(TRUE, "True")
                     t = t.replace(FALSE, "False")
-                    split_tokens.extend([t for t in re.split("(\(|\)|\*|/|\+|\-|%|<|>|<=|>=|\")", t) if len(t) > 0])
+                    split_tokens.extend([t for t in re.split("(\(|\)|\*|/|\+|\-|%|<=|>=|<|>|\")", t) if len(t) > 0])
             result = ""
             if len(split_tokens) == 1:
                 t = split_tokens[0]
@@ -154,7 +154,7 @@ class Parser:
                 while i < len(split_tokens):
                     t = split_tokens[i]
                     if is_float(t) or is_token_literal(t) or \
-                            t in ["True", "False", "(", ")", "*", "/", "+", "-", "%", "<", ">"]:
+                            t in ["True", "False", "(", ")", "*", "/", "+", "-", "%", "<", ">", "<=", ">="]:
                         pass
                     elif t == "is":
                         split_tokens[i] = "=="
@@ -434,15 +434,13 @@ class Parser:
                     return
 
             elif tokens[0] == "tfw":
+                # print self.call_stack  # debug line
                 # Returning from function call
                 if len(self.call_stack) > 1:
                     if tokens_len > 1:
                         return_val = self.parse_expression(tokens[1:])
                         if return_val is not None:
-                            if len(self.return_stack) > 0:
-                                self.return_stack[-1] = return_val
-                            else:
-                                self.return_stack.append(return_val)
+                            self.return_stack.append(return_val)
                     line_address = self.call_stack.pop()["return_address"]
                     continue
                 # Returning from main
@@ -526,17 +524,21 @@ class Parser:
 
             # Syntax: >inb4 i from start to end (by step)
             elif tokens[0] == "inb4":
-                if tokens_len == 8 and tokens[2] == "from" and tokens[3].isdigit() and tokens[4] == "to" \
-                        and tokens[5].isdigit() and tokens[6] == "by" and tokens[7].isdigit():
-                    if not self.add_variable(tokens[1], int(tokens[3])):
-                        print_error("bad variable", line_address)
-                        return
-                    loop_stack.append({"line_pos": line_address,
-                                      "counter": tokens[1],
-                                      "start": int(tokens[3]),
-                                      "end": int(tokens[5]),
-                                      "step": int(tokens[7])})
-                else:
+                try:
+                    if tokens_len == 8 and tokens[2] == "from" and tokens[4] == "to" and tokens[6] == "by":
+                        start_val = self.parse_expression(tokens[3])
+                        end_val = self.parse_expression()
+                        if not self.add_variable(tokens[1], start_val):
+                            print_error("bad variable", line_address)
+                            return
+                        loop_stack.append({"line_pos": line_address,
+                                          "counter": tokens[1],
+                                          "start": int(tokens[3]),
+                                          "end": int(tokens[5]),
+                                          "step": int(tokens[7])})
+                    else:
+                        raise GreentextError
+                except GreentextError:
                     print_error("bad inb4 syntax", line_address)
                     return
 
