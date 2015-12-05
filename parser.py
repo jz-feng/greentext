@@ -190,14 +190,10 @@ class Parser:
         except GreentextError:
             return None
 
-    # noinspection PyPep8Naming
     def parse_signature(self, split_tokens, allow_exprs):
         # DFA to check function signature syntax
-        ST_START = 0
-        ST_LPAREN = 1
-        ST_ID = 2
-        ST_COMMA = 3
-        ST_RPAREN = 4
+        # noinspection PyPep8Naming
+        ST_START, ST_LPAREN, ST_ID, ST_COMMA, ST_RPAREN = 0, 1, 2, 3, 4
 
         params = []
         param_tokens = []
@@ -527,23 +523,79 @@ class Parser:
             # Syntax: >inb4 i from start to end (by step)
             elif tokens[0] == "inb4":
                 try:
-                    if tokens_len == 8 and tokens[2] == "from" and tokens[4] == "to" and tokens[6] == "by":
-                        start_val = self.parse_expression(tokens[3:4])
-                        end_val = self.parse_expression(tokens[5:6])
-                        if start_val is None or end_val is None or (not start_val.isdigit()) or (not end_val.isdigit()):
+                    # DFA to check loop syntax & process loop arguments
+                    # noinspection PyPep8Naming
+                    ST_START, ST_VAR, ST_FROM, ST_FROM_VAL, ST_TO, ST_TO_VAL, ST_BY, ST_BY_VAL = 0, 1, 2, 3, 4, 5, 6, 7
+
+                    expr_tokens = []
+                    counter_var = ""
+                    step_val = 1
+                    state = ST_START
+                    for t in tokens[1:]:
+                        if state == ST_START:                   # i
+                            state = ST_VAR
+                            counter_var = t
+                        elif state == ST_VAR and t == "from":   # i from
+                            state = ST_FROM
+                        elif state == ST_FROM:                  # i from x
+                            state = ST_FROM_VAL
+                            expr_tokens.append(t)
+                        elif state == ST_FROM_VAL:
+                            if t == "to":                       # i from x to
+                                state = ST_TO
+                                start_val = self.parse_expression(expr_tokens)
+                                expr_tokens = []
+                                if start_val is not None and start_val not in truefalse:
+                                    start_val = int(start_val)
+                                else:
+                                    raise GreentextError
+                            else:                               # i from x x
+                                expr_tokens.append(t)
+                        elif state == ST_TO:                    # i from x to y
+                            state = ST_TO_VAL
+                            expr_tokens.append(t)
+                        elif state == ST_TO_VAL:
+                            if t == "by":                       # i from x to y by
+                                state = ST_BY
+                                end_val = self.parse_expression(expr_tokens)
+                                expr_tokens = []
+                                if end_val is not None and end_val not in truefalse:
+                                    end_val = int(end_val)
+                                else:                           # i from x to y y
+                                    raise GreentextError
+                            else:
+                                expr_tokens.append(t)
+                        elif state == ST_BY:                    # i from x to y by z
+                            state = ST_BY_VAL
+                            expr_tokens.append(t)
+                        elif state == ST_BY_VAL:                # i from x to y by z z
+                            expr_tokens.append(t)
+                        else:
                             raise GreentextError
-                        start_val = int(start_val)
-                        end_val = int(end_val)
-                        if not self.add_variable(tokens[1], start_val):
-                            print_error("bad variable", line_address)
-                            return
-                        loop_stack.append({"line_pos": line_address,
-                                          "counter": tokens[1],
-                                          "start": start_val,
-                                          "end": end_val,
-                                          "step": int(tokens[7])})
+
+                    if state == ST_TO_VAL:                      # i from x to y
+                        end_val = self.parse_expression(expr_tokens)
+                        if end_val is not None and end_val not in truefalse:
+                            end_val = int(end_val)
+                        else:
+                            raise GreentextError
+                    elif state == ST_BY_VAL:                    # i from x to y by z
+                        step_val = self.parse_expression(expr_tokens)
+                        if step_val is not None and step_val not in truefalse:
+                            step_val = int(step_val)
+                        else:
+                            raise GreentextError
                     else:
                         raise GreentextError
+
+                    if not self.add_variable(counter_var, start_val):
+                        print_error("bad variable", line_address)
+                        return
+                    loop_stack.append({"line_pos": line_address,
+                                      "counter": counter_var,
+                                      "start": start_val,
+                                      "end": end_val,
+                                      "step": step_val})
                 except GreentextError:
                     print_error("bad inb4 syntax", line_address)
                     return
