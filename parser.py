@@ -125,6 +125,7 @@ class Parser:
 
     def parse_expression(self, src_tokens):
         try:
+            local_vars = self.get_local_variables()
             split_tokens = []
             for t in src_tokens:
                 if is_token_literal(t):
@@ -143,8 +144,8 @@ class Parser:
                     result = t[1:-1]
                 elif t == "wew" and len(self.return_stack) > 0:
                     result = self.return_stack.pop()
-                elif t in self.get_local_variables():
-                    result = self.get_local_variables()[t]
+                elif t in local_vars:
+                    result = local_vars[t]
                 elif t in self.global_variables:
                     result = self.global_variables[t]
                 else:
@@ -166,8 +167,8 @@ class Parser:
                         split_tokens[i] = "False"
                     elif t == "wew" and len(self.return_stack) > 0:
                         split_tokens[i] = self.return_stack.pop()
-                    elif t in self.get_local_variables():
-                        split_tokens[i] = str(self.get_local_variables()[t])
+                    elif t in local_vars:
+                        split_tokens[i] = str(local_vars[t])
                         i -= 1
                     elif t in self.global_variables:
                         split_tokens[i] = str(self.global_variables[t])
@@ -474,13 +475,14 @@ class Parser:
                         else:
                             raise GreentextError
                     else:
+                        local_vars = self.get_local_variables()
                         func_params = self.parse_signature(split_tokens[1:], True)
                         for i in range(0, len(func_params)):
                             p = func_params[i]
                             if is_token_literal(p):
                                 func_params[i] = p[1:-1]
-                            if p in self.get_local_variables():
-                                func_params[i] = self.get_local_variables()[p]
+                            if p in local_vars:
+                                func_params[i] = local_vars[p]
                             elif p in self.global_variables:
                                 func_params[i] = self.global_variables[p]
 
@@ -548,9 +550,10 @@ class Parser:
 
             elif tokens == ["done", "inb4"]:
                 if len(loop_stack) > 0:
+                    local_vars = self.get_local_variables()
                     call = loop_stack[-1]
                     self.add_variable(call["counter"], self.get_local_variables()[call["counter"]] + call["step"])
-                    counter = self.get_local_variables()[call["counter"]]
+                    counter = local_vars[call["counter"]]
                     if (call["step"] > 0 and counter < call["end"]) \
                             or (call["step"] < 0 and counter > call["end"]):
                         line_address = call["line_pos"]
