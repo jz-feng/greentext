@@ -10,7 +10,7 @@ truefalse = [TRUE, FALSE]
 
 
 def is_token_literal(token):
-    return token.startswith('\'') and token.endswith('\'')
+    return str(token).startswith('\'') and str(token).endswith('\'')
 
 
 def is_float(token):
@@ -526,6 +526,15 @@ class Parser:
 
             # Syntax: >inb4 i from start to end (by step)
             elif tokens[0] == "inb4":
+
+                # Fix to allow variables holding a number value to be used in loops.
+                local_vars = self.get_local_variables()
+                need_num = [3, 5, 7]
+                for index in need_num:
+                    if not tokens[index].isdigit():
+                        if tokens[index] in local_vars:
+                            tokens[index] = local_vars[tokens[index]]
+
                 if tokens_len == 8 and tokens[2] == "from" and tokens[3].isdigit() and tokens[4] == "to" \
                         and tokens[5].isdigit() and tokens[6] == "by" and tokens[7].isdigit():
                     if not self.add_variable(tokens[1], int(tokens[3])):
