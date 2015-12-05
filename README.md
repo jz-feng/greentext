@@ -48,7 +48,7 @@ Boolean values are true = `:^)` false = `:^(`.
 - Format: `>inb4 counter_name from start to end by step`; `>done inb4` indicates end of loop
 - `by step` can be omitted; step value defaults to 1
 ````
->inb4 i from 10 to 0 by -2
+>inb4 i from 5 + 5 to 10 - 2 * 5 by -2
   >mfw i        # Outputs 10 8 6 4 2 (on separate lines)
 >done inb4
 ````
