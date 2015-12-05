@@ -46,6 +46,7 @@ Boolean values are true = `:^)` false = `:^(`.
 ````
 - **For loops** are done with `>inb4`
 - Format: `>inb4 counter_name from start to end by step`; `>done inb4` indicates end of loop
+- `by step` can be omitted; step value defaults to 1
 ````
 >inb4 i from 10 to 0 by -2
   >mfw i        # Outputs 10 8 6 4 2 (on separate lines)
@@ -55,7 +56,7 @@ Boolean values are true = `:^)` false = `:^(`.
 ### Example - FizzBuzz
 
 ````
->inb4 i from 0 to 100 by 1
+>inb4 i from 0 to 100
   >implying i % 15 is 0
     >mfw "fizzbuzz", i
   >or not
