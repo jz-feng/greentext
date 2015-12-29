@@ -82,11 +82,16 @@ class Parser:
     # Element = anything
     return_stack = []
 
+    # Identifier restrictions
+    keywords = ["mfw", "be", "like", "done", "implying", "is", "and", "or", "not", "inb4", "from", "to", "by", "thank",
+                "wew", "wewlad", "tfw"]
+
     def __init__(self):
         pass
 
     def add_global_variable(self, var_name, var_value):
-        if var_value is not None and len(var_name) > 0 and var_name[0].isalpha() and var_name.isalnum():
+        if var_value is not None and len(var_name) > 0 and var_name[0].isalpha() and var_name.isalnum() \
+                and var_name not in self.keywords:
             self.global_variables[var_name] = var_value
             return True
         else:
@@ -94,7 +99,7 @@ class Parser:
 
     def add_variable(self, var_name, var_value):
         if var_value is not None and len(var_name) > 0 and var_name[0].isalpha() and var_name.isalnum() \
-                and len(self.call_stack) > 0:
+                and var_name not in self.keywords and len(self.call_stack) > 0:
             self.call_stack[-1]["variables"][var_name] = var_value
             return True
         else:
@@ -108,7 +113,7 @@ class Parser:
 
     def add_function(self, func_name, func_params, start_address):
         if len(func_name) > 0 and func_name[0].isalpha() and func_name.isalnum()\
-                and func_name not in self.functions:
+                and func_name not in self.functions and func_name not in self.keywords:
             # Check for duplicate params
             if len(func_params) != len(set(func_params)):
                 return False
