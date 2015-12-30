@@ -76,6 +76,7 @@ class Parser:
 
     global_variables = {}
     functions = {}
+    labels = {}
 
     # Element = {"return_address":, "variables": {"var_name": var_value, ...}}
     call_stack = []
@@ -250,6 +251,8 @@ class Parser:
         is_in_func_def = False
         is_in_main_def = False
 
+        statements_stack = []
+
         while line_address < len(lines):
             # Extract string literals, store as tokens
             literals_tokens = parse_literals(lines[line_address])
@@ -280,6 +283,11 @@ class Parser:
                 line_address += 1
                 continue
 
+            if len(statements_stack) > 0:
+                statement = statements_stack[-1]
+            else:
+                statement = None
+
             if tokens == ["be", "me"]:
                 if is_in_func_def:
                     print_error("missing tfw before be me", line_address)
@@ -299,6 +307,12 @@ class Parser:
                         return
                     if is_in_main_def:
                         print_error("don't forget to thank mr skeltal", line_address)
+                        return
+                    if len(statements_stack) > 0:
+                        if statements_stack[-1][0] == "implying":
+                            print_error("missing done implying", line_address)
+                        elif statements_stack[-1][0] == "inb4":
+                            print_error("missing done inb4", line_address)
                         return
 
                     is_in_func_def = True
@@ -327,6 +341,37 @@ class Parser:
 
             elif tokens == ["thank", "mr", "skeltal"]:
                 is_in_main_def = False
+
+            elif tokens[0] == "implying":
+                statements_stack.append(("implying", line_address))     # keep address of if line
+                self.labels[line_address] = {}
+
+            elif tokens == ["or", "not"]:
+                if statement is not None and statement[0] == "implying":
+                    self.labels[statement[1]]["or_not"] = line_address  # map address of if line -> else line
+                else:
+                    print_error("unexpected or not", line_address)
+                    return
+
+            elif tokens == ["done", "implying"]:
+                if statement is not None and statement[0] == "implying":
+                    self.labels[statement[1]]["done_implying"] = line_address   # map address of if line -> end if line
+                    statements_stack.pop()
+                else:
+                    print_error("unexpected done implying", line_address)
+                    return
+
+            elif tokens[0] == "inb4":
+                statements_stack.append(("inb4", line_address))         # keep address of loop start
+
+            elif tokens == ["done", "inb4"]:
+                if statement is not None and statement[0] == "inb4":
+                    self.labels[line_address] = {}
+                    self.labels[line_address]["inb4"] = statement[1]    # map address of loop end -> loop start
+                    statements_stack.pop()
+                else:
+                    print_error("unexpected done inb4", line_address)
+                    return
 
             # Process global variable declarations
             if not (is_in_func_def or is_in_main_def):
@@ -359,6 +404,14 @@ class Parser:
         if is_in_main_def:
             print_error("don't forget to thank mr skeltal", -1)
             return
+        if len(statements_stack) > 0:
+            if statements_stack[-1][0] == "implying":
+                print_error("missing done implying at EOF", -1)
+            elif statements_stack[-1][0] == "inb4":
+                print_error("missing done inb4 at EOF", -1)
+            return
+
+        print self.labels
 
         # Second pass
         # Interpret/execute code
