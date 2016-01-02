@@ -243,7 +243,7 @@ class Parser:
 
         # First pass
         # Tokenize and clean input
-        # Parse function definitions, create symbol table for functions
+        # Parse function definitions, create symbol table for functions, generate branching operations
 
         line_tokens = []
         line_address = 0
@@ -414,12 +414,11 @@ class Parser:
                 print_error("missing done inb4 at EOF", -1)
             return
 
-        print self.labels
+        print self.labels       # debug line
 
         # Second pass
         # Interpret/execute code
 
-        # Element = {"line_pos":, "counter":, "start":, "end":, "step":}
         loop_stack = []
 
         # Begin execution at main
@@ -569,7 +568,8 @@ class Parser:
                 try:
                     # DFA to check loop syntax & process loop arguments
                     # noinspection PyPep8Naming
-                    ST_START, ST_VAR, ST_FROM, ST_FROM_VAL, ST_TO, ST_TO_VAL, ST_BY, ST_BY_VAL = 0, 1, 2, 3, 4, 5, 6, 7
+                    ST_START, ST_VAR, ST_FROM, ST_FROM_VAL, ST_TO, ST_TO_VAL, ST_BY, ST_BY_VAL = \
+                        0, 1, 2, 3, 4, 5, 6, 7
 
                     expr_tokens = []
                     counter_var = ""
@@ -579,8 +579,13 @@ class Parser:
                         if state == ST_START:                   # i
                             state = ST_VAR
                             counter_var = t
-                        elif state == ST_VAR and t == "from":   # i from
-                            state = ST_FROM
+                            expr_tokens.append(t)
+                        elif state == ST_VAR:
+                            if t == "from":                     # i from
+                                state = ST_FROM
+                                expr_tokens = []
+                            else:                               # i ...
+                                expr_tokens.append(t)
                         elif state == ST_FROM:                  # i from x
                             state = ST_FROM_VAL
                             expr_tokens.append(t)
@@ -617,48 +622,52 @@ class Parser:
                         else:
                             raise GreentextError
 
-                    if state == ST_TO_VAL:                      # i from x to y
-                        end_val = self.parse_expression(expr_tokens)
-                        if end_val is not None and end_val not in truefalse:
-                            end_val = int(end_val)
-                        else:
-                            raise GreentextError
-                    elif state == ST_BY_VAL:                    # i from x to y by z
-                        step_val = self.parse_expression(expr_tokens)
-                        if step_val is not None and step_val not in truefalse:
-                            step_val = int(step_val)
-                        else:
+                    if state == ST_VAR:                         # while loop
+                        result = self.parse_expression(expr_tokens)
+                        if result not in truefalse:
                             raise GreentextError
                     else:
-                        raise GreentextError
+                        if state == ST_TO_VAL:                      # i from x to y
+                            end_val = self.parse_expression(expr_tokens)
+                            if end_val is not None and end_val not in truefalse:
+                                end_val = int(end_val)
+                            else:
+                                raise GreentextError
+                        elif state == ST_BY_VAL:                    # i from x to y by z
+                            step_val = self.parse_expression(expr_tokens)
+                            if step_val is not None and step_val not in truefalse:
+                                step_val = int(step_val)
+                            else:
+                                raise GreentextError
+                        else:
+                            raise GreentextError
 
-                    if not self.add_variable(counter_var, start_val):
-                        print_error("bad variable", line_address)
-                        return
-                    loop_stack.append({"line_pos": line_address,
-                                      "counter": counter_var,
-                                      "start": start_val,
-                                      "end": end_val,
-                                      "step": step_val})
+                        if len(loop_stack) == 0 or loop_stack[-1] != line_address:  # if first iteration of loop, declare loop counter
+                            loop_stack.append(line_address)
+                            if not self.add_variable(counter_var, start_val):
+                                print_error("bad variable", line_address)
+                                return
+                        elif loop_stack[-1] == line_address:        # if not first iteration of loop, increment loop counter
+                            self.add_variable(counter_var, self.get_local_variables()[counter_var] + 1)
+
+                        counter_val = self.get_local_variables()[counter_var]
+                        if step_val > 0:
+                            result = TRUE if counter_val < end_val else FALSE
+                        else:
+                            result = TRUE if counter_val > end_val else FALSE
+                        if result == FALSE:
+                            loop_stack.pop()
+
+                    if result == FALSE:
+                        line_address = self.labels[line_address]    # branch to loop end
+                        continue
                 except GreentextError:
                     print_error("bad inb4 syntax", line_address)
                     return
 
             elif tokens == ["done", "inb4"]:
-                if len(loop_stack) > 0:
-                    local_vars = self.get_local_variables()
-                    call = loop_stack[-1]
-                    self.add_variable(call["counter"], self.get_local_variables()[call["counter"]] + call["step"])
-                    counter = local_vars[call["counter"]]
-                    if (call["step"] > 0 and counter < call["end"]) \
-                            or (call["step"] < 0 and counter > call["end"]):
-                        line_address = call["line_pos"]
-                    else:
-                        del self.call_stack[-1]["variables"][call["counter"]]
-                        loop_stack.pop()
-                else:
-                    print_error("unexpected done inb4", line_address)
-                    return
+                line_address = self.labels[line_address]        # branch to loop start
+                continue
 
             elif tokens == ["thank", "mr", "skeltal"]:
                 exit()
