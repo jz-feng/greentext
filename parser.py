@@ -308,10 +308,10 @@ class Parser:
                     if is_in_main_def:
                         print_error("don't forget to thank mr skeltal", line_address)
                         return
-                    if len(statements_stack) > 0:
-                        if statements_stack[-1][0] == "implying":
+                    if statement is not None:
+                        if "implying" in statement:
                             print_error("missing done implying", line_address)
-                        elif statements_stack[-1][0] == "inb4":
+                        elif "inb4" in statement:
                             print_error("missing done inb4", line_address)
                         return
 
@@ -343,31 +343,34 @@ class Parser:
                 is_in_main_def = False
 
             elif tokens[0] == "implying":
-                statements_stack.append(("implying", line_address))     # keep address of if line
-                self.labels[line_address] = {}
+                statements_stack.append({"implying": line_address})     # keep address of 'if'
 
             elif tokens == ["or", "not"]:
-                if statement is not None and statement[0] == "implying":
-                    self.labels[statement[1]]["or_not"] = line_address  # map address of if line -> else line
+                if statement is not None and "implying" in statement:
+                    self.labels[statement["implying"]] = line_address + 1       # map branch from 'if' -> 'else'
+                    statements_stack[-1]["or_not"] = line_address               # keep address of 'else'
                 else:
                     print_error("unexpected or not", line_address)
                     return
 
             elif tokens == ["done", "implying"]:
-                if statement is not None and statement[0] == "implying":
-                    self.labels[statement[1]]["done_implying"] = line_address   # map address of if line -> end if line
+                if statement is not None and "implying" in statement:
+                    if "or_not" in statement:
+                        self.labels[statement["or_not"]] = line_address + 1     # map branch from 'else' -> 'end if'
+                    else:
+                        self.labels[statement["implying"]] = line_address + 1   # if no 'else', branch from 'if' -> 'end if'
                     statements_stack.pop()
                 else:
                     print_error("unexpected done implying", line_address)
                     return
 
             elif tokens[0] == "inb4":
-                statements_stack.append(("inb4", line_address))         # keep address of loop start
+                statements_stack.append({"inb4": line_address})                 # keep address of loop start
 
             elif tokens == ["done", "inb4"]:
-                if statement is not None and statement[0] == "inb4":
-                    self.labels[line_address] = {}
-                    self.labels[line_address]["inb4"] = statement[1]    # map address of loop end -> loop start
+                if statement is not None and "inb4" in statement:
+                    self.labels[line_address] = statement["inb4"]               # map branch from loop end -> loop start
+                    self.labels[statement["inb4"]] = line_address + 1           # map branch from loop start -> loop end
                     statements_stack.pop()
                 else:
                     print_error("unexpected done inb4", line_address)
@@ -418,10 +421,6 @@ class Parser:
 
         # Element = {"line_pos":, "counter":, "start":, "end":, "step":}
         loop_stack = []
-        # Element = TRUE/FALSE
-        condition_execution_stack = []
-        # Element = TRUE/FALSE
-        condition_scope_stack = []
 
         # Begin execution at main
         line_address = main_address
@@ -434,14 +433,6 @@ class Parser:
 
             # Skip processing for blank lines
             if tokens_len == 0:
-                line_address += 1
-                continue
-
-            # Skip line if this is not the right conditional branch UNLESS for conditional statements
-            if (condition_scope_stack != condition_execution_stack) \
-                    and not ((tokens[0] == "implying")
-                    or (tokens == ["or", "not"])
-                    or (tokens == ["done", "implying"])):
                 line_address += 1
                 continue
 
@@ -554,29 +545,24 @@ class Parser:
                     print_error("bad wew signature", line_address)
                     return
 
-            # Syntax: >implying boolean_var/boolean_expression
+            # Syntax: >implying boolean_expression
             elif tokens[0] == "implying":
-                condition_scope_stack.append(TRUE)
-
                 result = self.parse_expression(tokens[1:])
-                if result is None:
+                if result == TRUE:          # continue execution
+                    pass
+                elif result == FALSE:       # branch to 'else' block or 'end if'
+                    line_address = self.labels[line_address]
+                    continue
+                else:
                     print_error("bad expression", line_address)
                     return
-                if result in truefalse:
-                    condition_execution_stack.append(result)
-                else:
-                    print_error("bad implying syntax", line_address)
-                    return
-                # print condition_scope_stack, condition_execution_stack, line_address  # debug line
 
-            # Syntax: >or not
             elif tokens == ["or", "not"]:
-                if len(condition_scope_stack) > 0:
-                    condition_scope_stack[-1] = FALSE
-                else:
-                    print_error("unexpected or not", line_address)
-                    return
-                # print condition_scope_stack, condition_execution_stack, line_address  # debug line
+                line_address = self.labels[line_address]                    # branch to 'end if'
+                continue
+
+            elif tokens == ["done", "implying"]:
+                pass
 
             # Syntax: >inb4 i from start to end (by step)
             elif tokens[0] == "inb4":
@@ -672,15 +658,6 @@ class Parser:
                         loop_stack.pop()
                 else:
                     print_error("unexpected done inb4", line_address)
-                    return
-
-            elif tokens == ["done", "implying"]:
-                if len(condition_scope_stack) > 0:
-                    condition_scope_stack.pop()
-                    condition_execution_stack.pop()
-                    # print condition_scope_stack, condition_execution_stack, line_address  # debug line
-                else:
-                    print_error("unexpected done implying", line_address)
                     return
 
             elif tokens == ["thank", "mr", "skeltal"]:
