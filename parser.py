@@ -414,7 +414,7 @@ class Parser:
                 print_error("missing done inb4 at EOF", -1)
             return
 
-        print self.labels       # debug line
+        # print self.labels       # debug line
 
         # Second pass
         # Interpret/execute code
