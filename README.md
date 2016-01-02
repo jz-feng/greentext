@@ -44,12 +44,19 @@ Boolean values are true = `:^)` false = `:^(`.
   >mfw "false"    # Outputs false
 >done implying
 ````
-- **For loops** are done with `>inb4`
-- Format: `>inb4 counter_name from start to end by step`; `>done inb4` indicates end of loop
+- **For loops** and **while loops** are both done with `>inb4`
+- For loop syntax: `>inb4 counter_name from start to end by step`
 - `by step` can be omitted; step value defaults to 1
+- While loop syntax: `>inb4 boolean_expression`
+- `>done inb4` indicates end of loop
 ````
 >inb4 i from 5 + 5 to 10 - 2 * 5 by -2
-  >mfw i        # Outputs 10 8 6 4 2 (on separate lines)
+  >mfw i
+>done inb4
+
+>be n like 0
+>inb4 n < 10
+  >be n like n - 1
 >done inb4
 ````
 
@@ -115,8 +122,3 @@ Greentext works similarly to C, with a main function and other functions that ca
   >mfw "factorial of", n, "is", wew
   >thank mr skeltal
 ````
-
-### Upcoming Stuff
-- "else if" statements
-- inline function calls
-- Data structures and pointers??? (Sounds like fun)
