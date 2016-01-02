@@ -56,7 +56,7 @@ Boolean values are true = `:^)` false = `:^(`.
 
 >be n like 0
 >inb4 n < 10
-  >be n like n - 1
+  >be n like n + 1
 >done inb4
 ````
 
