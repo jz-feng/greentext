@@ -1,7 +1,5 @@
 # greentext
 
-*I am done working on this project for the most part. But if some interesting idea ever pops into my head I may get back to this. Feel free to make pull requests.*
-
 Do you love coding? Do you enjoy dank memes? With this interpreter you can **write code in greentext**!!!111!!11!
 
 ### Usage
