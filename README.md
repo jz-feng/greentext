@@ -1,10 +1,10 @@
 # greentext
 
-Do you love coding? Do you enjoy dank memes? With this interpreter you can **write code in greentext**!!!111!!11!
+Become an _Internet Connoisseur™_ in `#{CURRENT_YEAR}` and start writing code in memes today!
 
 ### Usage
 
-The interpreter takes input from stdin. Run it and write code, or pass a pre-written input file into it.
+The interpreter takes input from stdin. `python parser.py < input_file` to run.
 
 ### The language
 
