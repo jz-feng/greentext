@@ -13,11 +13,12 @@ def is_float(token):
         return False
 
 
-def print_error(message, line_address):
+def error_and_quit(message, line_address):
     if line_address == -1:
         print "wtf:", message
     else:
         print "wtf:", message, "at line", line_address + 1
+    exit()
 
 
 def extract_literals(line):
