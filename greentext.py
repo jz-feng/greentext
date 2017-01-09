@@ -196,10 +196,10 @@ class Greentext:
 
         while line_address < len(lines):
             # Extract string literals, store as tokens
-            literals_tokens = parse_literals(lines[line_address])
+            literals_tokens = extract_literals(lines[line_address])
 
             # Tokenize the rest of the line
-            tokens = parse_tokens(literals_tokens)
+            tokens = extract_tokens(literals_tokens)
 
             # Remove commented tokens
             i = 0

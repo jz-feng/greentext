@@ -20,7 +20,7 @@ def print_error(message, line_address):
         print "wtf:", message, "at line", line_address + 1
 
 
-def parse_literals(line):
+def extract_literals(line):
     tokens = [t for t in re.split(r"(\")", line) if len(t) > 0]
     if len(tokens) > 0 and tokens[-1].endswith("\n"):   # Remove newline char
         tokens[-1] = tokens[-1][:-1]
@@ -50,7 +50,7 @@ def parse_literals(line):
     return [t for t in tokens if len(t) > 0 and t != "\""]
 
 
-def parse_tokens(tokens):
+def extract_tokens(tokens):
     split_tokens = []
     for t in tokens:
         if is_token_literal(t):
