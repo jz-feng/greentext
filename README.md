@@ -1,10 +1,18 @@
 # greentext
 
+Greentext is a not-to-be-taken-very-seriously procedural programming language written in and interpreted into Python. I was inspired by [this reddit thread](https://www.reddit.com/r/shittyprogramming/comments/3p45zw/new_programming_language_on_the_scene_memearrow/) and decided to turn the idea into reality.
+
+Greentext features most of the basic programming constructs, such as variables, conditional statements, loops, function calls, and recursion. See below for detailed specifications and examples.
+
+This project was made mostly for fun, so the code was kind of written with "*just make this work*" in mind. As a result the error-handling and code readability aspects are fairly lacking. I have plans to recreate something like this as an actual compiler using Haskell in the future.
+
+----
+
 Become an _Internet Connoisseur™_ in `#{CURRENT_YEAR}` and start writing code in memes today!
 
 ### Usage
 
-The interpreter takes input from stdin. `python parser.py < input_file` to run.
+The interpreter takes input from stdin. `python greentext.py < input_file` to run.
 
 ### The language
 
