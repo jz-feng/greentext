@@ -112,7 +112,7 @@ Greentext works similarly to C, with a main function and other functions that ca
     >wew factorial(n - 1)
     >be result like wew
   >done implying
-  >tfw n * r
+  >tfw n * result
 
 >be me
   >be n like 10
