@@ -1,5 +1,7 @@
 import re
 
+# Util functions that do not depend on the runtime state
+
 
 def is_token_literal(token):
     return str(token).startswith('\'') and str(token).endswith('\'')

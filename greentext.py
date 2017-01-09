@@ -17,8 +17,23 @@ class Greentext:
     # Element = anything
     return_stack = []
 
+    # Input lines broken down into tokens
+    line_tokens = []
+
+    statements_stack = []
+    loop_stack = []
+
+    # (Line Counter) location in the source code of current execution/interpretation
+    lc = 0
+
+    main_address = -1
+    is_in_func_def = False
+    is_in_main_def = False
+
     def __init__(self):
         pass
+
+    # Util functions that depend on the runtime state
 
     def add_global_variable(self, var_name, var_value):
         if var_value is not None and len(var_name) > 0 and var_name[0].isalpha() and var_name.isalnum() \
@@ -175,17 +190,9 @@ class Greentext:
         # Tokenize and clean input
         # Parse function definitions, create symbol table for functions, generate branching operations
 
-        line_tokens = []
-        line_address = 0
-        main_address = -1
-        is_in_func_def = False
-        is_in_main_def = False
-
-        statements_stack = []
-
-        while line_address < len(lines):
+        while self.lc < len(lines):
             # Extract string literals, store as tokens
-            literals_tokens = extract_literals(lines[line_address])
+            literals_tokens = extract_literals(lines[self.lc])
 
             # Tokenize the rest of the line
             tokens = extract_tokens(literals_tokens)
@@ -209,97 +216,97 @@ class Greentext:
 
             # Skip processing for blank lines (but keep them)
             if tokens_len == 0:
-                line_tokens.append(tokens)
-                line_address += 1
+                self.line_tokens.append(tokens)
+                self.lc += 1
                 continue
 
-            if len(statements_stack) > 0:
-                statement = statements_stack[-1]
+            if len(self.statements_stack) > 0:
+                statement = self.statements_stack[-1]
             else:
                 statement = None
 
             if tokens == ["be", "me"]:
-                if is_in_func_def:
-                    error_and_quit("missing tfw before be me", line_address)
-                is_in_main_def = True
-                main_address = line_address + 1
-                if not self.add_function("main", [], main_address):
-                    error_and_quit("duplicate be me", line_address)
+                if self.is_in_func_def:
+                    error_and_quit("missing tfw before be me", self.lc)
+                self.is_in_main_def = True
+                self.main_address = self.lc + 1
+                if not self.add_function("main", [], self.main_address):
+                    error_and_quit("duplicate be me", self.lc)
 
             elif tokens[0] == "wewlad":
                 try:
                     if tokens_len < 2:
                         raise GreentextError
-                    if is_in_func_def:
-                        error_and_quit("can't wewlad inside wewlad", line_address)
-                    if is_in_main_def:
-                        error_and_quit("don't forget to thank mr skeltal", line_address)
+                    if self.is_in_func_def:
+                        error_and_quit("can't wewlad inside wewlad", self.lc)
+                    if self.is_in_main_def:
+                        error_and_quit("don't forget to thank mr skeltal", self.lc)
                     if statement is not None:
                         if "implying" in statement:
-                            error_and_quit("missing done implying", line_address)
+                            error_and_quit("missing done implying", self.lc)
                         elif "inb4" in statement:
-                            error_and_quit("missing done inb4", line_address)
+                            error_and_quit("missing done inb4", self.lc)
                         return
 
-                    is_in_func_def = True
+                    self.is_in_func_def = True
                     split_tokens = []
                     for t in tokens[1:]:
                         split_tokens.extend([t for t in re.split("(\(|\)|,)", t) if len(t) > 0])
 
                     func_name = split_tokens[0]
                     if len(split_tokens) == 1:
-                        if not self.add_function(func_name, [], line_address):
+                        if not self.add_function(func_name, [], self.lc):
                             raise GreentextError
                     else:
                         func_params = self.parse_signature(split_tokens[1:], False)
-                        if not self.add_function(func_name, func_params, line_address):
+                        if not self.add_function(func_name, func_params, self.lc):
                             raise GreentextError
                 except GreentextError:
-                    error_and_quit("bad wewlad signature", line_address)
+                    error_and_quit("bad wewlad signature", self.lc)
 
             elif tokens[0] == "tfw":
-                if is_in_func_def:
-                    is_in_func_def = False
+                if self.is_in_func_def:
+                    self.is_in_func_def = False
                 else:
-                    error_and_quit("unexpected tfw", line_address)
+                    error_and_quit("unexpected tfw", self.lc)
                     return
 
             elif tokens == ["thank", "mr", "skeltal"]:
-                is_in_main_def = False
+                self.is_in_main_def = False
 
             elif tokens[0] == "implying":
-                statements_stack.append({"implying": line_address})     # keep address of 'if'
+                self.statements_stack.append({"implying": self.lc})     # keep address of 'if'
 
             elif tokens == ["or", "not"]:
                 if statement is not None and "implying" in statement:
-                    self.labels[statement["implying"]] = line_address + 1       # map branch from 'if' -> 'else'
-                    statements_stack[-1]["or_not"] = line_address               # keep address of 'else'
+                    self.labels[statement["implying"]] = self.lc + 1       # map branch from 'if' -> 'else'
+                    self.statements_stack[-1]["or_not"] = self.lc               # keep address of 'else'
                 else:
-                    error_and_quit("unexpected or not", line_address)
+                    error_and_quit("unexpected or not", self.lc)
 
             elif tokens == ["done", "implying"]:
                 if statement is not None and "implying" in statement:
                     if "or_not" in statement:
-                        self.labels[statement["or_not"]] = line_address + 1     # map branch from 'else' -> 'end if'
+                        self.labels[statement["or_not"]] = self.lc + 1     # map branch from 'else' -> 'end if'
                     else:
-                        self.labels[statement["implying"]] = line_address + 1   # if no 'else', branch from 'if' -> 'end if'
-                    statements_stack.pop()
+                        self.labels[statement["implying"]] = self.lc + 1   # if no 'else', branch from 'if' -> 'end if'
+                    self.statements_stack.pop()
                 else:
-                    error_and_quit("unexpected done implying", line_address)
+                    error_and_quit("unexpected done implying", self.lc)
 
             elif tokens[0] == "inb4":
-                statements_stack.append({"inb4": line_address})                 # keep address of loop start
+                self.statements_stack.append({"inb4": self.lc})                 # keep address of loop start
 
             elif tokens == ["done", "inb4"]:
                 if statement is not None and "inb4" in statement:
-                    self.labels[line_address] = statement["inb4"]               # map branch from loop end -> loop start
-                    self.labels[statement["inb4"]] = line_address + 1           # map branch from loop start -> loop end
-                    statements_stack.pop()
+                    self.labels[self.lc] = statement["inb4"]               # map branch from loop end -> loop start
+                    self.labels[statement["inb4"]] = self.lc + 1           # map branch from loop start -> loop end
+                    self.statements_stack.pop()
                 else:
-                    error_and_quit("unexpected done inb4", line_address)
+                    error_and_quit("unexpected done inb4", self.lc)
 
             # Process global variable declarations
-            if not (is_in_func_def or is_in_main_def):
+            if not (self.is_in_func_def or self.is_in_main_def):
                 if tokens[0] == "be":
                     if tokens_len == 2 and tokens[1] != "me":
                         var_name = tokens[1]
@@ -308,25 +315,25 @@ class Greentext:
                         var_name = tokens[1]
                         var_value = self.parse_expression(tokens[3:])
                         if var_value is None:
-                            error_and_quit("bad expression", line_address)
+                            error_and_quit("bad expression", self.lc)
                         if not self.add_global_variable(var_name, var_value):
-                            error_and_quit("bad variable", line_address)
+                            error_and_quit("bad variable", self.lc)
                     else:
-                        error_and_quit("bad be syntax", line_address)
+                        error_and_quit("bad be syntax", self.lc)
 
-            line_tokens.append(tokens)
-            line_address += 1
+            self.line_tokens.append(tokens)
+            self.lc += 1
 
-        if main_address == -1:
+        if self.main_address == -1:
             error_and_quit("be me not found", -1)
-        if is_in_func_def:
+        if self.is_in_func_def:
             error_and_quit("missing tfw at EOF", -1)
-        if is_in_main_def:
+        if self.is_in_main_def:
             error_and_quit("don't forget to thank mr skeltal", -1)
-        if len(statements_stack) > 0:
-            if statements_stack[-1][0] == "implying":
+        if len(self.statements_stack) > 0:
+            if self.statements_stack[-1][0] == "implying":
                 error_and_quit("missing done implying at EOF", -1)
-            elif statements_stack[-1][0] == "inb4":
+            elif self.statements_stack[-1][0] == "inb4":
                 error_and_quit("missing done inb4 at EOF", -1)
             return
 
@@ -335,20 +342,18 @@ class Greentext:
         # Second pass
         # Interpret/execute code
 
-        loop_stack = []
-
         # Begin execution at main
-        line_address = main_address
+        self.lc = self.main_address
         self.call_stack.append({"return_address": -1, "variables": {}})
 
-        while line_address < len(line_tokens):
-            tokens = line_tokens[line_address]
+        while self.lc < len(self.line_tokens):
+            tokens = self.line_tokens[self.lc]
 
             tokens_len = len(tokens)
 
             # Skip processing for blank lines
             if tokens_len == 0:
-                line_address += 1
+                self.lc += 1
                 continue
 
             # Syntax: >mfw token group 1, token group 2
@@ -362,7 +367,7 @@ class Greentext:
                         if result is not None:
                             print result,
                         else:
-                            error_and_quit("bad expression", line_address)
+                            error_and_quit("bad expression", self.lc)
                         tokens_group = []
                 # if line ended without comma, print the rest as a token group
                 if len(tokens_group) > 0:
@@ -370,7 +375,7 @@ class Greentext:
                     if result is not None:
                         print result,
                     else:
-                        error_and_quit("bad expression", line_address)
+                        error_and_quit("bad expression", self.lc)
                 # print newline
                 print
 
@@ -383,11 +388,11 @@ class Greentext:
                     var_name = tokens[1]
                     var_value = self.parse_expression(tokens[3:])
                     if var_value is None:
-                        error_and_quit("bad expression", line_address)
+                        error_and_quit("bad expression", self.lc)
                     if not self.add_variable(var_name, var_value):
-                        error_and_quit("bad variable", line_address)
+                        error_and_quit("bad variable", self.lc)
                 else:
-                    error_and_quit("bad be syntax", line_address)
+                    error_and_quit("bad be syntax", self.lc)
 
             elif tokens[0] == "tfw":
                 # print self.call_stack  # debug line
@@ -397,14 +402,14 @@ class Greentext:
                         return_val = self.parse_expression(tokens[1:])
                         if return_val is not None:
                             self.return_stack.append(return_val)
-                    line_address = self.call_stack.pop()["return_address"]
+                    self.lc = self.call_stack.pop()["return_address"]
                     continue
                 # Returning from main
                 elif len(self.call_stack) == 1:
                     self.call_stack.pop()
                     return
                 else:
-                    error_and_quit("unexpected tfw", line_address)
+                    error_and_quit("unexpected tfw", self.lc)
 
             elif tokens[0] == "wew":
                 try:
@@ -417,13 +422,13 @@ class Greentext:
 
                     func_name = split_tokens[0]
                     if func_name not in self.functions:
-                        error_and_quit("wewlad not found", line_address)
+                        error_and_quit("wewlad not found", self.lc)
                     function = self.functions[func_name]
 
                     if len(split_tokens) == 1:
                         if len(function["params"]) == 0:
-                            self.call_stack.append({"return_address": line_address + 1, "variables": {}})
-                            line_address = function["start_address"]
+                            self.call_stack.append({"return_address": self.lc + 1, "variables": {}})
+                            self.lc = function["start_address"]
                             continue
                         else:
                             raise GreentextError
@@ -444,13 +449,13 @@ class Greentext:
                             variables = {}
                             for i in range(0, len(function["params"])):
                                 variables[function["params"][i]] = func_params[i]
-                            self.call_stack.append({"return_address": line_address + 1, "variables": variables})
-                            line_address = function["start_address"]
+                            self.call_stack.append({"return_address": self.lc + 1, "variables": variables})
+                            self.lc = function["start_address"]
                             continue
                         else:
                             raise GreentextError
                 except GreentextError:
-                    error_and_quit("bad wew signature", line_address)
+                    error_and_quit("bad wew signature", self.lc)
 
             # Syntax: >implying boolean_expression
             elif tokens[0] == "implying":
@@ -458,13 +463,13 @@ class Greentext:
                 if result == TRUE:          # continue execution
                     pass
                 elif result == FALSE:       # branch to 'else' block or 'end if'
-                    line_address = self.labels[line_address]
+                    self.lc = self.labels[self.lc]
                     continue
                 else:
-                    error_and_quit("bad expression", line_address)
+                    error_and_quit("bad expression", self.lc)
 
             elif tokens == ["or", "not"]:
-                line_address = self.labels[line_address]                    # branch to 'end if'
+                self.lc = self.labels[self.lc]                    # branch to 'end if'
                 continue
 
             elif tokens == ["done", "implying"]:
@@ -549,11 +554,11 @@ class Greentext:
                         else:
                             raise GreentextError
 
-                        if len(loop_stack) == 0 or loop_stack[-1] != line_address:  # if first iteration of loop, declare loop counter
-                            loop_stack.append(line_address)
+                        if len(self.loop_stack) == 0 or self.loop_stack[-1] != self.lc:  # if first iteration of loop, declare loop counter
+                            self.loop_stack.append(self.lc)
                             if not self.add_variable(counter_var, start_val):
-                                error_and_quit("bad variable", line_address)
-                        elif loop_stack[-1] == line_address:        # if not first iteration of loop, increment loop counter
+                                error_and_quit("bad variable", self.lc)
+                        elif self.loop_stack[-1] == self.lc:        # if not first iteration of loop, increment loop counter
                             self.add_variable(counter_var, self.get_local_variables()[counter_var] + 1)
 
                         counter_val = self.get_local_variables()[counter_var]
@@ -562,16 +567,16 @@ class Greentext:
                         else:
                             result = TRUE if counter_val > end_val else FALSE
                         if result == FALSE:
-                            loop_stack.pop()
+                            self.loop_stack.pop()
 
                     if result == FALSE:
-                        line_address = self.labels[line_address]    # branch to loop end
+                        self.lc = self.labels[self.lc]    # branch to loop end
                         continue
                 except GreentextError:
-                    error_and_quit("bad inb4 syntax", line_address)
+                    error_and_quit("bad inb4 syntax", self.lc)
 
             elif tokens == ["done", "inb4"]:
-                line_address = self.labels[line_address]        # branch to loop start
+                self.lc = self.labels[self.lc]        # branch to loop start
                 continue
 
             elif tokens == ["thank", "mr", "skeltal"]:
@@ -579,9 +584,9 @@ class Greentext:
 
             # Undefined token
             else:
-                error_and_quit("what is this", line_address)
+                error_and_quit("what is this", self.lc)
 
-            line_address += 1
+            self.lc += 1
 
     def main(self):
         inputlines = []
