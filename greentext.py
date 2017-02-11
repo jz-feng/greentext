@@ -1,4 +1,5 @@
 import sys
+import os.path
 from utils import *
 from defs import *
 
@@ -25,6 +26,9 @@ class Greentext:
 
     # (Line Counter) location in the source code of current execution/interpretation
     lc = 0
+
+    # Offset the pointer location for functions for importing scripts
+    offset = 0
 
     main_address = -1
     is_in_func_def = False
@@ -184,7 +188,7 @@ class Greentext:
             raise GreentextError
         return params
 
-    def run(self, lines):
+    def run(self, lines, imported):
 
         # First pass
         # Tokenize and clean input
@@ -225,11 +229,25 @@ class Greentext:
             else:
                 statement = None
 
-            if tokens == ["be", "me"]:
+            if tokens[0] == "itt":
+                if self.is_in_func_def:
+                    error_and_quit("can't itt inside wewlad", self.lc)
+                if self.is_in_main_def:
+                    error_and_quit("can't itt inside be me", self.lc)
+                importfile = tokens[1]
+                if not os.path.isfile(importfile):
+                    error_and_quit("can't find file for itt", self.lc)
+                templc = self.lc
+                tempoffset = self.offset
+                self.read_input(open(importfile), True)
+                self.offset = self.offset + tempoffset + (self.lc-templc)
+                self.lc = templc
+
+            elif tokens == ["be", "me"]:
                 if self.is_in_func_def:
                     error_and_quit("missing tfw before be me", self.lc)
                 self.is_in_main_def = True
-                self.main_address = self.lc + 1
+                self.main_address = self.lc + 1 + self.offset
                 if not self.add_function("main", [], self.main_address):
                     error_and_quit("duplicate be me", self.lc)
 
@@ -255,11 +273,11 @@ class Greentext:
 
                     func_name = split_tokens[0]
                     if len(split_tokens) == 1:
-                        if not self.add_function(func_name, [], self.lc):
+                        if not self.add_function(func_name, [], self.lc + self.offset):
                             raise GreentextError
                     else:
                         func_params = self.parse_signature(split_tokens[1:], False)
-                        if not self.add_function(func_name, func_params, self.lc):
+                        if not self.add_function(func_name, func_params, self.lc + self.offset):
                             raise GreentextError
                 except GreentextError:
                     error_and_quit("bad wewlad signature", self.lc)
@@ -275,32 +293,32 @@ class Greentext:
                 self.is_in_main_def = False
 
             elif tokens[0] == "implying":
-                self.statements_stack.append({"implying": self.lc})     # keep address of 'if'
+                self.statements_stack.append({"implying": self.lc + self.offset})        # keep address of 'if'
 
             elif tokens == ["or", "not"]:
                 if statement is not None and "implying" in statement:
-                    self.labels[statement["implying"]] = self.lc + 1       # map branch from 'if' -> 'else'
-                    self.statements_stack[-1]["or_not"] = self.lc               # keep address of 'else'
+                    self.labels[statement["implying"]] = self.lc + 1 + self.offset       # map branch from 'if' -> 'else'
+                    self.statements_stack[-1]["or_not"] = self.lc + self.offset          # keep address of 'else'
                 else:
                     error_and_quit("unexpected or not", self.lc)
 
             elif tokens == ["done", "implying"]:
                 if statement is not None and "implying" in statement:
                     if "or_not" in statement:
-                        self.labels[statement["or_not"]] = self.lc + 1     # map branch from 'else' -> 'end if'
+                        self.labels[statement["or_not"]] = self.lc + 1 + self.offset     # map branch from 'else' -> 'end if'
                     else:
-                        self.labels[statement["implying"]] = self.lc + 1   # if no 'else', branch from 'if' -> 'end if'
+                        self.labels[statement["implying"]] = self.lc + 1 + self.offset   # if no 'else', branch from 'if' -> 'end if'
                     self.statements_stack.pop()
                 else:
                     error_and_quit("unexpected done implying", self.lc)
 
             elif tokens[0] == "inb4":
-                self.statements_stack.append({"inb4": self.lc})                 # keep address of loop start
+                self.statements_stack.append({"inb4": self.lc + self.offset})            # keep address of loop start
 
             elif tokens == ["done", "inb4"]:
                 if statement is not None and "inb4" in statement:
-                    self.labels[self.lc] = statement["inb4"]               # map branch from loop end -> loop start
-                    self.labels[statement["inb4"]] = self.lc + 1           # map branch from loop start -> loop end
+                    self.labels[self.lc + self.offset] = statement["inb4"]               # map branch from loop end -> loop start
+                    self.labels[statement["inb4"]] = self.lc + 1 + self.offset           # map branch from loop start -> loop end
                     self.statements_stack.pop()
                 else:
                     error_and_quit("unexpected done inb4", self.lc)
@@ -323,6 +341,10 @@ class Greentext:
 
             self.line_tokens.append(tokens)
             self.lc += 1
+
+        # If we have imported this code, don't run it
+        if imported:
+            return
 
         if self.main_address == -1:
             error_and_quit("be me not found", -1)
@@ -475,6 +497,9 @@ class Greentext:
             elif tokens == ["done", "implying"]:
                 pass
 
+            elif tokens[0] == "itt":
+                pass
+
             # Syntax: >inb4 i from start to end (by step)
             elif tokens[0] == "inb4":
                 try:
@@ -588,10 +613,10 @@ class Greentext:
 
             self.lc += 1
 
-    def main(self):
+    def read_input(self, inputfile, imported):
         inputlines = []
 
-        for line in sys.stdin:
+        for line in inputfile:
             stripped_line = line.lstrip()
             if len(stripped_line) == 0:
                 inputlines.append("")
@@ -603,7 +628,10 @@ class Greentext:
                 else:
                     error_and_quit("do you even greentext", -1)
 
-        self.run(inputlines)
+        self.run(inputlines, imported)
+
+    def main(self):
+        self.read_input(sys.stdin, False)
 
 if __name__ == "__main__":
     Greentext().main()
