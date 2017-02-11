@@ -240,7 +240,7 @@ class Greentext:
                 templc = self.lc
                 tempoffset = self.offset
                 self.read_input(open(importfile), True)
-                self.offset = tempoffset + (self.lc-templc)
+                self.offset = self.offset + tempoffset + (self.lc-templc)
                 self.lc = templc
 
             elif tokens == ["be", "me"]:
