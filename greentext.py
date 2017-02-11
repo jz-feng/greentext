@@ -293,12 +293,12 @@ class Greentext:
                 self.is_in_main_def = False
 
             elif tokens[0] == "implying":
-                self.statements_stack.append({"implying": self.lc + self.offset})     # keep address of 'if'
+                self.statements_stack.append({"implying": self.lc + self.offset})        # keep address of 'if'
 
             elif tokens == ["or", "not"]:
                 if statement is not None and "implying" in statement:
-                    self.labels[statement["implying"]] = self.lc + 1 + self.offset      # map branch from 'if' -> 'else'
-                    self.statements_stack[-1]["or_not"] = self.lc + self.offset         # keep address of 'else'
+                    self.labels[statement["implying"]] = self.lc + 1 + self.offset       # map branch from 'if' -> 'else'
+                    self.statements_stack[-1]["or_not"] = self.lc + self.offset          # keep address of 'else'
                 else:
                     error_and_quit("unexpected or not", self.lc)
 
@@ -313,7 +313,7 @@ class Greentext:
                     error_and_quit("unexpected done implying", self.lc)
 
             elif tokens[0] == "inb4":
-                self.statements_stack.append({"inb4": self.lc + self.offset})                 # keep address of loop start
+                self.statements_stack.append({"inb4": self.lc + self.offset})            # keep address of loop start
 
             elif tokens == ["done", "inb4"]:
                 if statement is not None and "inb4" in statement:
@@ -613,9 +613,6 @@ class Greentext:
 
             self.lc += 1
 
-    def main(self):
-        self.read_input(sys.stdin, False)
-
     def read_input(self, inputfile, imported):
         inputlines = []
 
@@ -632,6 +629,9 @@ class Greentext:
                     error_and_quit("do you even greentext", -1)
 
         self.run(inputlines, imported)
+
+    def main(self):
+        self.read_input(sys.stdin, False)
 
 if __name__ == "__main__":
     Greentext().main()
