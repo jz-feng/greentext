@@ -17,9 +17,9 @@ def is_float(token):
 
 def error_and_quit(message, line_address):
     if line_address == -1:
-        print "wtf:", message
+        print ("wtf:", message)
     else:
-        print "wtf:", message, "at line", line_address + 1
+        print ("wtf:", message, "at line", line_address + 1)
     exit()
 
 
