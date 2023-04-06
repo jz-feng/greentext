@@ -365,7 +365,7 @@ class Greentext:
                         tokens_group.append(tokens_group.pop()[:-1])    # remove comma from last token
                         result = self.parse_expression(tokens_group)
                         if result is not None:
-                            print result,
+                            print (result),
                         else:
                             error_and_quit("bad expression", self.lc)
                         tokens_group = []
@@ -373,7 +373,7 @@ class Greentext:
                 if len(tokens_group) > 0:
                     result = self.parse_expression(tokens_group)
                     if result is not None:
-                        print result,
+                        print (result),
                     else:
                         error_and_quit("bad expression", self.lc)
                 # print newline
